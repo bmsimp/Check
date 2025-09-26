@@ -3,3 +3,6 @@ rules:
   - base: main
     upstream: CyberDrain:main
     mergeMethod: merge
+  - base: dev
+    upstream: CyberDrain:dev
+    mergeMethod: merge
