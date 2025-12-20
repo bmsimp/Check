@@ -1383,6 +1383,18 @@ class CheckOptions {
       this.elements.configDisplay.innerHTML =
         '<div class="config-loading">Loading configuration...</div>';
 
+      // Try to load from cache first (this reflects what's actually being used)
+      const cacheResult = await chrome.storage.local.get(["detection_rules_cache"]);
+      const cached = cacheResult?.detection_rules_cache;
+
+      if (cached && cached.rules) {
+        // Use cached rules which reflect the actual loaded configuration
+        this.currentConfigData = cached.rules;
+        this.updateConfigDisplay();
+        return;
+      }
+
+      // Fallback to packaged rules if no cache exists
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
 
@@ -2437,7 +2449,7 @@ class CheckOptions {
           cippServerUrl: "",
           cippTenantId: "",
           customRulesUrl:
-            "https://raw.githubusercontent.com/CyberDrain/ProjectX/refs/heads/main/rules/detection-rules.json",
+            "https://raw.githubusercontent.com/CyberDrain/Check/refs/heads/main/rules/detection-rules.json",
           updateInterval: 24,
           enableDebugLogging: false,
           // Note: enableDeveloperConsoleLogging is not policy-managed - remains under user control
