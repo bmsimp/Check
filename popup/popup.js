@@ -67,7 +67,6 @@ class CheckPopup {
     this.elements.aboutLink = document.getElementById("aboutLink");
     this.elements.companyBranding = document.getElementById("companyBranding");
     this.elements.companyName = document.getElementById("companyName");
-    this.elements.companyLink = document.getElementById("companyLink");
 
     // Debug section
     this.elements.debugSection = document.getElementById("debugSection");
@@ -143,9 +142,6 @@ class CheckPopup {
     );
     this.elements.aboutLink.addEventListener("click", (e) =>
       this.handleFooterLink(e, "about")
-    );
-    this.elements.companyLink.addEventListener("click", (e) =>
-      this.handleFooterLink(e, "company")
     );
 
     // Notification close listener
@@ -384,22 +380,22 @@ class CheckPopup {
       console.warn("Popup: Using fallback branding configuration");
       this.brandingConfig = {
         companyName: "CyberDrain",
-        companyURL: "https://cyberdrain.com/",
         productName: "Check",
         logoUrl: "images/icon32.png",
-        supportUrl: "https://support.cyberdrain.com",
-        privacyPolicyUrl: "https://cyberdrain.com/privacy",
+        supportUrl: "",
+        privacyPolicyUrl: "",
+        aboutUrl: "",
         primaryColor: "#F77F00",
       };
     } catch (error) {
       console.error("Error loading branding configuration:", error);
       this.brandingConfig = {
         companyName: "CyberDrain",
-        companyURL: "https://cyberdrain.com/",
         productName: "Check",
         logoUrl: "images/icon32.png",
-        supportUrl: "https://support.cyberdrain.com",
-        privacyPolicyUrl: "https://cyberdrain.com/privacy",
+        supportUrl: "",
+        privacyPolicyUrl: "",
+        aboutUrl: "",
         primaryColor: "#F77F00",
       };
     }
@@ -449,6 +445,9 @@ class CheckPopup {
     }
     if (this.brandingConfig.privacyPolicyUrl) {
       this.elements.privacyLink.href = this.brandingConfig.privacyPolicyUrl;
+    }
+    if (this.brandingConfig.aboutUrl) {
+      this.elements.aboutLink.href = this.brandingConfig.aboutUrl;
     }
 
     // Apply primary color if available
@@ -1093,10 +1092,9 @@ class CheckPopup {
         url = this.brandingConfig.privacyPolicyUrl;
         break;
       case "about":
-        url = chrome.runtime.getURL("options/options.html#about");
-        break;
-      case "company":
-        url = this.brandingConfig.companyURL;
+        url =
+          this.brandingConfig.aboutUrl ||
+          chrome.runtime.getURL("options/options.html#about");
         break;
     }
 
@@ -1396,10 +1394,11 @@ class CheckPopup {
     if (isVisible) {
       // Hide the details
       this.elements.detectionResults.style.display = "none";
-      this.elements.showDetectionDetails.innerHTML = `
-        <span class="material-icons">visibility</span>
-        Show Details
-      `;
+      this.setButtonWithIcon(
+        this.elements.showDetectionDetails,
+        "visibility",
+        "Show Details"
+      );
       return;
     }
 
@@ -1408,10 +1407,11 @@ class CheckPopup {
       console.log("Re-displaying cached debug data for blocked page");
       this.displayDetectionDetails(this.cachedDebugData.detectionDetails);
       this.elements.detectionResults.style.display = "block";
-      this.elements.showDetectionDetails.innerHTML = `
-        <span class="material-icons">visibility_off</span>
-        Hide Details
-      `;
+      this.setButtonWithIcon(
+        this.elements.showDetectionDetails,
+        "visibility_off",
+        "Hide Details"
+      );
       return;
     }
 
@@ -1434,10 +1434,11 @@ class CheckPopup {
           if (response && response.success) {
             this.displayDetectionDetails(response.details);
             this.elements.detectionResults.style.display = "block";
-            this.elements.showDetectionDetails.innerHTML = `
-              <span class="material-icons">visibility_off</span>
-              Hide Details
-            `;
+            this.setButtonWithIcon(
+              this.elements.showDetectionDetails,
+              "visibility_off",
+              "Hide Details"
+            );
 
             // Store debug data for potential use if page gets blocked
             this.storeCurrentDebugData(response.details);
@@ -1477,10 +1478,20 @@ class CheckPopup {
       this.elements.m365Score.className = `detection-score ${scoreClass}`;
 
       if (foundElements && foundElements.length > 0) {
-        this.elements.m365Elements.innerHTML = `
-          <strong>Found:</strong> ${foundElements.join(", ")}<br>
-          <strong>Missing:</strong> ${missingElements.join(", ")}
-        `;
+        this.elements.m365Elements.textContent = "";
+        const foundLabel = document.createElement("strong");
+        foundLabel.textContent = "Found:";
+        this.elements.m365Elements.appendChild(foundLabel);
+        this.elements.m365Elements.appendChild(
+          document.createTextNode(` ${foundElements.join(", ")}`)
+        );
+        this.elements.m365Elements.appendChild(document.createElement("br"));
+        const missingLabel = document.createElement("strong");
+        missingLabel.textContent = "Missing:";
+        this.elements.m365Elements.appendChild(missingLabel);
+        this.elements.m365Elements.appendChild(
+          document.createTextNode(` ${(missingElements || []).join(", ")}`)
+        );
       } else {
         this.elements.m365Elements.textContent =
           "No Microsoft elements detected";
@@ -1568,18 +1579,16 @@ class CheckPopup {
 
     if (isVisible) {
       this.elements.sourceContent.style.display = "none";
-      this.elements.showPageSource.innerHTML = `
-        <span class="material-icons">code</span>
-        View Source
-      `;
+      this.setButtonWithIcon(this.elements.showPageSource, "code", "View Source");
     } else {
       if (this.pageSourceContent) {
         this.elements.sourceDisplay.textContent = this.pageSourceContent;
         this.elements.sourceContent.style.display = "block";
-        this.elements.showPageSource.innerHTML = `
-          <span class="material-icons">visibility_off</span>
-          Hide Source
-        `;
+        this.setButtonWithIcon(
+          this.elements.showPageSource,
+          "visibility_off",
+          "Hide Source"
+        );
       } else {
         this.showNotification("No page source available", "warning");
       }
@@ -1597,12 +1606,34 @@ class CheckPopup {
       searchTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
       "gi"
     );
-    const highlightedContent = content.replace(
-      regex,
-      (match) => `<span class="source-highlight">${match}</span>`
-    );
 
-    this.elements.sourceDisplay.innerHTML = highlightedContent;
+    const fragment = document.createDocumentFragment();
+    let lastIndex = 0;
+    let match;
+
+    while ((match = regex.exec(content)) !== null) {
+      if (match.index > lastIndex) {
+        fragment.appendChild(
+          document.createTextNode(content.slice(lastIndex, match.index))
+        );
+      }
+
+      const highlight = document.createElement("span");
+      highlight.className = "source-highlight";
+      highlight.textContent = match[0];
+      fragment.appendChild(highlight);
+
+      lastIndex = regex.lastIndex;
+      if (match[0].length === 0) {
+        regex.lastIndex++;
+      }
+    }
+
+    if (lastIndex < content.length) {
+      fragment.appendChild(document.createTextNode(content.slice(lastIndex)));
+    }
+
+    this.elements.sourceDisplay.replaceChildren(fragment);
   }
 
   copySourceToClipboard() {
@@ -1634,17 +1665,19 @@ class CheckPopup {
 
     if (isVisible) {
       this.elements.consoleContent.style.display = "none";
-      this.elements.showConsoleLogs.innerHTML = `
-        <span class="material-icons">terminal</span>
-        View Logs
-      `;
+      this.setButtonWithIcon(
+        this.elements.showConsoleLogs,
+        "terminal",
+        "View Logs"
+      );
     } else {
       await this.loadConsoleLogs();
       this.elements.consoleContent.style.display = "block";
-      this.elements.showConsoleLogs.innerHTML = `
-        <span class="material-icons">visibility_off</span>
-        Hide Logs
-      `;
+      this.setButtonWithIcon(
+        this.elements.showConsoleLogs,
+        "visibility_off",
+        "Hide Logs"
+      );
     }
   }
 
@@ -1748,22 +1781,39 @@ class CheckPopup {
     this.elements.consoleStats.textContent = `${logs.length} log entries`;
 
     // Format and display logs
-    let formattedLogs = "";
-    logs.forEach((log, index) => {
+    const fragment = document.createDocumentFragment();
+    logs.forEach((log) => {
       const timestamp = new Date(log.timestamp).toLocaleTimeString();
-      const level = log.level || "log";
+      const level = (log.level || "log").toLowerCase();
+      const safeLevel = ["log", "info", "warn", "error", "debug"].includes(
+        level
+      )
+        ? level
+        : "log";
       const message = log.message || "";
 
-      formattedLogs += `<div class="console-entry">`;
-      formattedLogs += `<span class="console-timestamp">${timestamp}</span>`;
-      formattedLogs += `<span class="console-level ${level}">[${level.toUpperCase()}]</span>`;
-      formattedLogs += `<span class="console-message">${this.escapeHtml(
-        message
-      )}</span>`;
-      formattedLogs += `</div>`;
+      const entry = document.createElement("div");
+      entry.className = "console-entry";
+
+      const timestampEl = document.createElement("span");
+      timestampEl.className = "console-timestamp";
+      timestampEl.textContent = timestamp;
+
+      const levelEl = document.createElement("span");
+      levelEl.className = `console-level ${safeLevel}`;
+      levelEl.textContent = `[${safeLevel.toUpperCase()}]`;
+
+      const messageEl = document.createElement("span");
+      messageEl.className = "console-message";
+      messageEl.textContent = String(message);
+
+      entry.appendChild(timestampEl);
+      entry.appendChild(levelEl);
+      entry.appendChild(messageEl);
+      fragment.appendChild(entry);
     });
 
-    this.elements.consoleDisplay.innerHTML = formattedLogs;
+    this.elements.consoleDisplay.replaceChildren(fragment);
     this.consoleLogsContent = logs
       .map(
         (log) =>
@@ -1777,7 +1827,7 @@ class CheckPopup {
   searchInConsoleLogs(searchTerm) {
     if (!this.consoleLogsContent || !searchTerm.trim()) {
       // Restore original display if search is cleared
-      if (this.elements.consoleDisplay.innerHTML.includes("console-entry")) {
+      if (this.elements.consoleDisplay.querySelector(".console-entry")) {
         return; // Already displaying formatted logs
       }
       return;
@@ -1824,6 +1874,14 @@ class CheckPopup {
     const div = document.createElement("div");
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  setButtonWithIcon(button, iconName, label) {
+    if (!button) return;
+    const icon = document.createElement("span");
+    icon.className = "material-icons";
+    icon.textContent = iconName;
+    button.replaceChildren(icon, document.createTextNode(` ${label}`));
   }
 
   // Debug Data Storage Methods
@@ -1874,68 +1932,115 @@ class CheckPopup {
 
   async getStoredDebugDataForUrl(url) {
     try {
-      const storageKey = `debug_data_${btoa(url).substring(0, 50)}`;
-
-      // For blocked pages, use background script communication since content scripts don't work
-      if (this.isBlockedRoute) {
+      const normalizeUrl = (inputUrl) => {
         try {
-          console.log("Requesting debug data with key:", storageKey);
-          const response = await chrome.runtime.sendMessage({
-            type: "GET_STORED_DEBUG_DATA",
-            key: storageKey,
-          });
-
-          console.log("Background script response:", response);
-
-          if (response && response.success && response.debugData) {
-            const data = response.debugData;
-            console.log("Retrieved data structure:", data);
-            console.log("Data has timestamp:", !!data.timestamp);
-            console.log("Data has debugData:", !!data.debugData);
-
-            // Check if data is not too old (1 hour)
-            const oneHour = 60 * 60 * 1000;
-            if (data.timestamp && Date.now() - data.timestamp < oneHour) {
-              console.log(
-                "Retrieved stored debug data via background script for URL:",
-                url
-              );
-              console.log("Returning debug data:", data.debugData);
-              return data.debugData; // Return the nested debugData object
-            } else {
-              console.log("Data too old or no timestamp, cleaning up");
-              // Clean up old data
-              await chrome.storage.local.remove([storageKey]);
-            }
-          } else {
-            console.log("No valid response or missing debugData");
-          }
-          return null;
-        } catch (error) {
-          console.error(
-            "Failed to retrieve debug data via background script:",
-            error
-          );
-          return null;
+          const parsed = new URL(inputUrl);
+          parsed.hash = "";
+          return parsed.toString();
+        } catch {
+          return inputUrl;
         }
-      } else {
-        // For regular pages, use direct storage access
-        const result = await chrome.storage.local.get([storageKey]);
-        const data = result[storageKey];
+      };
 
-        if (data && data.debugData) {
-          // Check if data is not too old (1 hour)
-          const oneHour = 60 * 60 * 1000;
-          if (Date.now() - data.timestamp < oneHour) {
-            console.log("Retrieved stored debug data for URL:", url);
-            return data.debugData;
-          } else {
-            // Clean up old data
-            await chrome.storage.local.remove([storageKey]);
-          }
+      const canonicalUrl = (inputUrl) => {
+        try {
+          const parsed = new URL(inputUrl);
+          const host = parsed.hostname.replace(/^www\./i, "").toLowerCase();
+          const path = (parsed.pathname || "/").replace(/\/$/, "") || "/";
+          const search = parsed.search || "";
+          return `${host}${path}${search}`;
+        } catch {
+          return inputUrl;
         }
-        return null;
+      };
+
+      const buildVariantKeys = (inputUrl) => {
+        const variants = new Set();
+        const addKey = (u) => {
+          try {
+            variants.add(`debug_data_${btoa(u).substring(0, 50)}`);
+          } catch {
+            // Ignore malformed URL variant
+          }
+        };
+
+        const normalized = normalizeUrl(inputUrl);
+        addKey(normalized);
+
+        try {
+          const parsed = new URL(normalized);
+          const pathAndQuery = `${parsed.pathname || "/"}${parsed.search || ""}`;
+
+          const withSlashPath = pathAndQuery.endsWith("/")
+            ? pathAndQuery
+            : `${pathAndQuery}/`;
+          const withoutSlashPath = pathAndQuery.replace(/\/$/, "") || "/";
+
+          addKey(`${parsed.protocol}//${parsed.host}${withSlashPath}`);
+          addKey(`${parsed.protocol}//${parsed.host}${withoutSlashPath}`);
+
+          if (parsed.hostname.startsWith("www.")) {
+            addKey(
+              `${parsed.protocol}//${parsed.hostname.slice(4)}${pathAndQuery}`
+            );
+          } else {
+            addKey(`${parsed.protocol}//www.${parsed.hostname}${pathAndQuery}`);
+          }
+
+          const swappedProtocol = parsed.protocol === "https:" ? "http:" : "https:";
+          addKey(`${swappedProtocol}//${parsed.host}${pathAndQuery}`);
+        } catch {
+          // Ignore parse errors - normalized variant already added
+        }
+
+        return [...variants];
+      };
+
+      const oneHour = 60 * 60 * 1000;
+      const targetCanonical = canonicalUrl(url);
+      const variantKeys = buildVariantKeys(url);
+
+      // Fast path: check deterministic key variants first.
+      if (variantKeys.length > 0) {
+        const directResult = await chrome.storage.local.get(variantKeys);
+
+        for (const key of variantKeys) {
+          const data = directResult[key];
+          if (!data || !data.debugData) continue;
+
+          const ageValid = data.timestamp && Date.now() - data.timestamp < oneHour;
+          if (!ageValid) {
+            await chrome.storage.local.remove([key]);
+            continue;
+          }
+
+          console.log("Retrieved stored debug data via key variant:", key);
+          return data.debugData;
+        }
       }
+
+      // Fallback path: scan debug_data_* keys and match by canonical stored URL.
+      const allStorage = await chrome.storage.local.get(null);
+      const candidates = Object.entries(allStorage)
+        .filter(([key, value]) => key.startsWith("debug_data_") && value && value.debugData)
+        .map(([key, value]) => ({ key, value }));
+
+      const matched = candidates
+        .filter(({ value }) => {
+          if (!value.url) return false;
+          if (!value.timestamp || Date.now() - value.timestamp >= oneHour) {
+            return false;
+          }
+          return canonicalUrl(value.url) === targetCanonical;
+        })
+        .sort((a, b) => (b.value.timestamp || 0) - (a.value.timestamp || 0));
+
+      if (matched.length > 0) {
+        console.log("Retrieved stored debug data via canonical URL fallback:", matched[0].key);
+        return matched[0].value.debugData;
+      }
+
+      return null;
     } catch (error) {
       console.error("Failed to retrieve debug data:", error);
       return null;

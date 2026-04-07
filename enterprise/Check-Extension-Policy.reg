@@ -20,11 +20,26 @@ Windows Registry Editor Version 5.00
 "updateInterval"=dword:00000018
 "enableDebugLogging"=dword:00000000
 
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge\3rdparty\extensions\knepjpocdagponkonnbggpcnhnaikajg\policy\domainSquatting]
+"enabled"=dword:00000001
+
+; Generic webhook configuration (optional)
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge\3rdparty\extensions\knepjpocdagponkonnbggpcnhnaikajg\policy\genericWebhook]
+"enabled"=dword:00000000
+"url"=""
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge\3rdparty\extensions\knepjpocdagponkonnbggpcnhnaikajg\policy\genericWebhook\events]
+"1"="detection_alert"
+"2"="page_blocked"
+
 ; Custom branding configuration
 [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge\3rdparty\extensions\knepjpocdagponkonnbggpcnhnaikajg\policy\customBranding]
 "companyName"="CyberDrain"
 "productName"="Check"
 "supportEmail"=""
+"supportUrl"=""
+"privacyPolicyUrl"=""
+"aboutUrl"=""
 "primaryColor"="#F77F00"
 "logoUrl"=""
 
@@ -52,11 +67,26 @@ Windows Registry Editor Version 5.00
 "updateInterval"=dword:00000018
 "enableDebugLogging"=dword:00000000
 
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\benimdeioplgkhanklclahllklceahbe\policy\domainSquatting]
+"enabled"=dword:00000001
+
+; Generic webhook configuration for Chrome (optional)
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\benimdeioplgkhanklclahllklceahbe\policy\genericWebhook]
+"enabled"=dword:00000000
+"url"=""
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\benimdeioplgkhanklclahllklceahbe\policy\genericWebhook\events]
+"1"="detection_alert"
+"2"="page_blocked"
+
 ; Custom branding configuration for Chrome
 [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\benimdeioplgkhanklclahllklceahbe\policy\customBranding]
 "companyName"="CyberDrain"
 "productName"="Check"
 "supportEmail"=""
+"supportUrl"=""
+"privacyPolicyUrl"=""
+"aboutUrl"=""
 "primaryColor"="#F77F00"
 "logoUrl"=""
 

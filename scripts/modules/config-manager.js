@@ -111,12 +111,28 @@ export class ConfigManager {
             "https://raw.githubusercontent.com/CyberDrain/Check/refs/heads/main/rules/detection-rules.json",
           updateInterval: 24,
           enableDebugLogging: false,
+          domainSquatting: {
+            enabled: true,
+            deviationThreshold: 2,
+            algorithms: {
+              levenshtein: true,
+              homoglyph: true,
+              typosquat: true,
+              combosquat: true,
+            },
+            protectedDomains: [],
+            Action: "block",
+            logDetections: true,
+          },
           // Note: enableDeveloperConsoleLogging is not policy-managed - remains under user control
 
           // Custom branding (matches managed_schema.json structure)
           customBranding: {
             companyName: "CyberDrain",
             productName: "Check Enterprise",
+            supportUrl: "",
+            privacyPolicyUrl: "",
+            aboutUrl: "",
             primaryColor: "#F77F00",
             logoUrl:
               "https://cyberdrain.com/images/favicon_hu_20e77b0e20e363e.png",
@@ -288,6 +304,21 @@ export class ConfigManager {
       customRulesUrl: "https://raw.githubusercontent.com/CyberDrain/Check/refs/heads/main/rules/detection-rules.json",
       updateInterval: 24, // hours
 
+      // Domain squatting runtime settings
+      domainSquatting: {
+        enabled: true,
+        deviationThreshold: 2,
+        algorithms: {
+          levenshtein: true,
+          homoglyph: true,
+          typosquat: true,
+          combosquat: true,
+        },
+        protectedDomains: [],
+        Action: "block",
+        logDetections: true,
+      },
+
       // Performance settings
       scanDelay: 100,
       maxScanDepth: 10,
@@ -324,16 +355,17 @@ export class ConfigManager {
       version: "1.0.0",
 
       // Visual branding
-      primaryColor: "#2563eb",
+      primaryColor: "#F77F00",
       secondaryColor: "#64748b",
       logoUrl: "images/logo.png",
       faviconUrl: "images/favicon.ico",
 
       // Contact information
-      supportEmail: "support@check.com",
-      supportUrl: "https://support.check.com",
-      privacyPolicyUrl: "https://check.com/privacy",
-      termsOfServiceUrl: "https://check.com/terms",
+      supportEmail: "",
+      supportUrl: "",
+      privacyPolicyUrl: "",
+      aboutUrl: "",
+      termsOfServiceUrl: "",
 
       // Customizable text
       welcomeMessage:
@@ -462,8 +494,12 @@ export class ConfigManager {
       await this.loadConfig();
     }
 
-    // Start with the base branding config
-    let finalBranding = await this.getBrandingConfig();
+    // Start with defaults to ensure required branding links are always available
+    const defaultBranding = this.getDefaultBrandingConfig();
+    let finalBranding = {
+      ...defaultBranding,
+      ...(await this.getBrandingConfig()),
+    };
 
     // If enterprise has custom branding, merge it in (takes precedence)
     if (this.enterpriseConfig && this.enterpriseConfig.customBranding) {
@@ -478,6 +514,11 @@ export class ConfigManager {
     const currentConfig = await this.getConfig();
     if (currentConfig.genericWebhook) {
       finalBranding.genericWebhook = currentConfig.genericWebhook;
+    }
+
+    // Derive support URL when only partial branding is configured
+    if (!finalBranding.supportUrl && finalBranding.supportEmail) {
+      finalBranding.supportUrl = `mailto:${finalBranding.supportEmail}`;
     }
 
     return finalBranding;

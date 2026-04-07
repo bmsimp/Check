@@ -126,12 +126,6 @@
           "type": "string",
           "default": ""
         },
-		"companyURL": {
-          "title": "Company URL",
-          "description": "Company URL used in the extension",
-          "type": "string",
-          "default": "https://cyberdrain.com/"
-        },
         "productName": {
           "title": "Product Name",
           "description": "Custom name for the extension",
@@ -143,6 +137,27 @@
           "description": "Email address for user support",
           "type": "string",
           "format": "email",
+          "default": ""
+        },
+        "supportUrl": {
+          "title": "Support URL",
+          "description": "URL opened by the popup Support link",
+          "type": "string",
+          "format": "uri",
+          "default": ""
+        },
+        "privacyPolicyUrl": {
+          "title": "Privacy URL",
+          "description": "URL opened by the popup Privacy link",
+          "type": "string",
+          "format": "uri",
+          "default": ""
+        },
+        "aboutUrl": {
+          "title": "About URL",
+          "description": "URL opened by the popup About link",
+          "type": "string",
+          "format": "uri",
           "default": ""
         },
         "primaryColor": {
@@ -158,6 +173,82 @@
           "type": "string",
           "format": "uri",
           "default": ""
+        }
+      }
+    },
+    "domainSquatting": {
+      "title": "Domain Squatting Detection",
+      "description": "Configuration for domain squatting detection to protect against typosquatting, homoglyphs, and combosquatting attacks. Enable/disable is controlled here (config/policy), and domains are automatically extracted from the URL allowlist.",
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "title": "Enabled",
+          "description": "Enable or disable domain squatting detection",
+          "type": "boolean",
+          "default": true
+        },
+        "deviationThreshold": {
+          "title": "Deviation Threshold",
+          "description": "Maximum number of character differences (Levenshtein distance) to trigger detection. Lower values are stricter.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5,
+          "default": 2
+        },
+        "algorithms": {
+          "title": "Detection Algorithms",
+          "description": "Enable or disable specific detection algorithms",
+          "type": "object",
+          "properties": {
+            "levenshtein": {
+              "title": "Levenshtein Distance",
+              "description": "Detect domains with small character differences",
+              "type": "boolean",
+              "default": true
+            },
+            "homoglyph": {
+              "title": "Homoglyph Detection",
+              "description": "Detect confusable characters (e.g., 'a' vs 'а')",
+              "type": "boolean",
+              "default": true
+            },
+            "typosquat": {
+              "title": "Typosquatting Detection",
+              "description": "Detect common typing mistakes and character swaps",
+              "type": "boolean",
+              "default": true
+            },
+            "combosquat": {
+              "title": "Combosquatting Detection",
+              "description": "Detect domains with added prefixes/suffixes",
+              "type": "boolean",
+              "default": true
+            }
+          }
+        },
+        "protectedDomains": {
+          "title": "Additional Protected Domains",
+          "description": "OPTIONAL: Additional domains to protect beyond those automatically extracted from the URL allowlist. Normally you should just add domains to the URL allowlist instead.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "title": "Domain",
+            "description": "Domain name to protect (e.g., 'company.com')"
+          },
+          "default": []
+        },
+        "Action": {
+          "title": "Action",
+          "description": "Action to take when domain squatting is detected",
+          "type": "string",
+          "enum": ["block", "warn", "log"],
+          "default": "block"
+        },
+        "logDetections": {
+          "title": "Log Detections",
+          "description": "Log all domain squatting detections to activity log",
+          "type": "boolean",
+          "default": true
         }
       }
     }

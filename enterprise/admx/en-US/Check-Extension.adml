@@ -115,6 +115,36 @@
                 
                 This helps identify which tenant/organization the security event originated from when using a shared CIPP instance.
             </string>
+            <!-- Generic Webhook - Edge -->
+            <string id="CheckGenericWebhookEnabled">Enable generic webhook</string>
+            <string id="CheckGenericWebhookEnabled_Explain">
+                This policy controls whether the Check extension sends selected security events to a custom webhook endpoint.
+                
+                When enabled: Events listed in "Generic webhook event types" are sent to the configured Generic Webhook URL.
+                When disabled (default): No generic webhook events are sent.
+                
+                Note: Requires Generic Webhook URL and at least one event type.
+            </string>
+            <string id="CheckGenericWebhookUrl">Generic webhook URL</string>
+            <string id="CheckGenericWebhookUrl_Explain">
+                This policy specifies the URL for a custom webhook endpoint that receives Check event payloads.
+                
+                Example: https://webhook.yourcompany.com/check-events
+                
+                This setting is only used when generic webhook is enabled.
+            </string>
+            <string id="CheckGenericWebhookEvents">Generic webhook event types</string>
+            <string id="CheckGenericWebhookEvents_Explain">
+                This policy specifies which event types are sent to the generic webhook endpoint.
+                
+                Supported values:
+                - detection_alert
+                - false_positive_report
+                - page_blocked
+                - rogue_app_detected
+                - threat_detected
+                - validation_event
+            </string>
             <!-- Custom Rules URL -->
             <string id="CheckCustomRulesUrl">Custom detection rules URL</string>
             <string id="CheckCustomRulesUrl_Explain">
@@ -181,15 +211,6 @@
                 
                 The company name appears in the extension popup and settings pages.
             </string>
-            <!-- Company URL -->
-            <string id="CheckCompanyUrl">Company URL</string>
-            <string id="CheckCompanyUrl_Explain">
-                This policy specifies the company URL used in the extension for branding and navigation purposes.
-                
-                Example: https://contoso.com
-                
-                The company URL is used for linking back to the company website from the extension interface.
-            </string>
             <!-- Product Name -->
             <string id="CheckProductName">Product name</string>
             <string id="CheckProductName_Explain">
@@ -207,6 +228,27 @@
                 Example: security@contoso.com
                 
                 This email address is displayed in the extension interface and help documentation.
+            </string>
+            <!-- Support URL -->
+            <string id="CheckSupportUrl">Support URL</string>
+            <string id="CheckSupportUrl_Explain">
+                This policy specifies the support URL opened by the extension Support link.
+                
+                Example: https://support.contoso.com
+            </string>
+            <!-- Privacy URL -->
+            <string id="CheckPrivacyPolicyUrl">Privacy URL</string>
+            <string id="CheckPrivacyPolicyUrl_Explain">
+                This policy specifies the privacy policy URL opened by the extension Privacy link.
+                
+                Example: https://contoso.com/privacy
+            </string>
+            <!-- About URL -->
+            <string id="CheckAboutUrl">About URL</string>
+            <string id="CheckAboutUrl_Explain">
+                This policy specifies the about URL opened by the extension About link.
+                
+                Example: https://contoso.com/about
             </string>
             <!-- Primary Color -->
             <string id="CheckPrimaryColor">Primary theme color</string>
@@ -236,6 +278,13 @@
                 
                 Debug logging should only be enabled for troubleshooting as it may impact performance and generate large log files.
             </string>
+            <string id="CheckDomainSquattingEnabled">Enable domain squatting detection</string>
+            <string id="CheckDomainSquattingEnabled_Explain">
+                This policy controls domain squatting detection in the Check extension.
+
+                When enabled (default): Typosquatting, homoglyph, and combosquatting protections are active.
+                When disabled: Domain squatting detections are skipped.
+            </string>
             <!-- Debug Logging - Chrome -->
             <string id="CheckDebugLoggingChrome">Enable debug logging (Chrome)</string>
             <string id="CheckDebugLoggingChrome_Explain">
@@ -245,6 +294,13 @@
                 When disabled (default): Only essential logging occurs.
                 
                 Debug logging should only be enabled for troubleshooting as it may impact performance and generate large log files.
+            </string>
+            <string id="CheckDomainSquattingEnabledChrome">Enable domain squatting detection (Chrome)</string>
+            <string id="CheckDomainSquattingEnabledChrome_Explain">
+                This policy controls domain squatting detection in the Check extension for Google Chrome.
+
+                When enabled (default): Typosquatting, homoglyph, and combosquatting protections are active.
+                When disabled: Domain squatting detections are skipped.
             </string>
             <!-- Valid Page Badge - Chrome -->
             <string id="CheckValidPageBadgeChrome">Show valid page badge (Chrome)</string>
@@ -300,6 +356,36 @@
                 
                 This helps identify which tenant/organization the security event originated from when using a shared CIPP instance.
             </string>
+            <!-- Generic Webhook - Chrome -->
+            <string id="CheckGenericWebhookEnabledChrome">Enable generic webhook (Chrome)</string>
+            <string id="CheckGenericWebhookEnabledChrome_Explain">
+                This policy controls whether the Check extension sends selected security events to a custom webhook endpoint in Google Chrome.
+                
+                When enabled: Events listed in "Generic webhook event types (Chrome)" are sent to the configured Generic Webhook URL.
+                When disabled (default): No generic webhook events are sent.
+                
+                Note: Requires Generic Webhook URL and at least one event type.
+            </string>
+            <string id="CheckGenericWebhookUrlChrome">Generic webhook URL (Chrome)</string>
+            <string id="CheckGenericWebhookUrlChrome_Explain">
+                This policy specifies the URL for a custom webhook endpoint that receives Check event payloads from Google Chrome.
+                
+                Example: https://webhook.yourcompany.com/check-events
+                
+                This setting is only used when generic webhook is enabled.
+            </string>
+            <string id="CheckGenericWebhookEventsChrome">Generic webhook event types (Chrome)</string>
+            <string id="CheckGenericWebhookEventsChrome_Explain">
+                This policy specifies which event types are sent to the generic webhook endpoint from Google Chrome.
+                
+                Supported values:
+                - detection_alert
+                - false_positive_report
+                - page_blocked
+                - rogue_app_detected
+                - threat_detected
+                - validation_event
+            </string>
             <!-- Custom Rules URL - Chrome -->
             <string id="CheckCustomRulesUrlChrome">Custom detection rules URL (Chrome)</string>
             <string id="CheckCustomRulesUrlChrome_Explain">
@@ -330,15 +416,6 @@
                 
                 The company name appears in the extension popup and settings pages.
             </string>
-            <!-- Company URL - Chrome -->
-            <string id="CheckCompanyUrlChrome">Company URL (Chrome)</string>
-            <string id="CheckCompanyUrlChrome_Explain">
-                This policy specifies the company URL used in the extension for branding and navigation purposes in Google Chrome.
-                
-                Example: https://contoso.com
-                
-                The company URL is used for linking back to the company website from the extension interface.
-            </string>
             <!-- Product Name - Chrome -->
             <string id="CheckProductNameChrome">Product name (Chrome)</string>
             <string id="CheckProductNameChrome_Explain">
@@ -356,6 +433,27 @@
                 Example: security@contoso.com
                 
                 This email address is displayed in the extension interface and help documentation.
+            </string>
+            <!-- Support URL - Chrome -->
+            <string id="CheckSupportUrlChrome">Support URL (Chrome)</string>
+            <string id="CheckSupportUrlChrome_Explain">
+                This policy specifies the support URL opened by the extension Support link in Google Chrome.
+                
+                Example: https://support.contoso.com
+            </string>
+            <!-- Privacy URL - Chrome -->
+            <string id="CheckPrivacyPolicyUrlChrome">Privacy URL (Chrome)</string>
+            <string id="CheckPrivacyPolicyUrlChrome_Explain">
+                This policy specifies the privacy policy URL opened by the extension Privacy link in Google Chrome.
+                
+                Example: https://contoso.com/privacy
+            </string>
+            <!-- About URL - Chrome -->
+            <string id="CheckAboutUrlChrome">About URL (Chrome)</string>
+            <string id="CheckAboutUrlChrome_Explain">
+                This policy specifies the about URL opened by the extension About link in Google Chrome.
+                
+                Example: https://contoso.com/about
             </string>
             <!-- Primary Color - Chrome -->
             <string id="CheckPrimaryColorChrome">Primary theme color (Chrome)</string>
@@ -387,6 +485,14 @@
                     <label>Tenant Identifier:</label>
                 </textBox>
             </presentation>
+            <presentation id="CheckGenericWebhookUrl">
+                <textBox refId="GenericWebhookUrl">
+                    <label>Generic Webhook URL:</label>
+                </textBox>
+            </presentation>
+            <presentation id="CheckGenericWebhookEvents">
+                <listBox refId="GenericWebhookEventsList">Generic Webhook Event Types:</listBox>
+            </presentation>
             <presentation id="CheckCustomRulesUrl">
                 <textBox refId="CustomRulesUrl">
                     <label>Custom Rules URL:</label>
@@ -409,11 +515,6 @@
                     <label>Company Name:</label>
                 </textBox>
             </presentation>
-            <presentation id="CheckCompanyUrl">
-                <textBox refId="CompanyUrl">
-                    <label>Company URL:</label>
-                </textBox>
-            </presentation>
             <presentation id="CheckProductName">
                 <textBox refId="ProductName">
                     <label>Product Name:</label>
@@ -422,6 +523,21 @@
             <presentation id="CheckSupportEmail">
                 <textBox refId="SupportEmail">
                     <label>Support Email:</label>
+                </textBox>
+            </presentation>
+            <presentation id="CheckSupportUrl">
+                <textBox refId="SupportUrl">
+                    <label>Support URL:</label>
+                </textBox>
+            </presentation>
+            <presentation id="CheckPrivacyPolicyUrl">
+                <textBox refId="PrivacyPolicyUrl">
+                    <label>Privacy URL:</label>
+                </textBox>
+            </presentation>
+            <presentation id="CheckAboutUrl">
+                <textBox refId="AboutUrl">
+                    <label>About URL:</label>
                 </textBox>
             </presentation>
             <presentation id="CheckPrimaryColor">
@@ -444,6 +560,14 @@
                     <label>Tenant Identifier:</label>
                 </textBox>
             </presentation>
+            <presentation id="CheckGenericWebhookUrlChrome">
+                <textBox refId="GenericWebhookUrlChrome">
+                    <label>Generic Webhook URL:</label>
+                </textBox>
+            </presentation>
+            <presentation id="CheckGenericWebhookEventsChrome">
+                <listBox refId="GenericWebhookEventsListChrome">Generic Webhook Event Types:</listBox>
+            </presentation>
             <presentation id="CheckCustomRulesUrlChrome">
                 <textBox refId="CustomRulesUrlChrome">
                     <label>Custom Rules URL:</label>
@@ -458,11 +582,6 @@
                     <label>Company Name:</label>
                 </textBox>
             </presentation>
-            <presentation id="CheckCompanyUrlChrome">
-                <textBox refId="CompanyUrlChrome">
-                    <label>Company URL:</label>
-                </textBox>
-            </presentation>
             <presentation id="CheckProductNameChrome">
                 <textBox refId="ProductNameChrome">
                     <label>Product Name:</label>
@@ -471,6 +590,21 @@
             <presentation id="CheckSupportEmailChrome">
                 <textBox refId="SupportEmailChrome">
                     <label>Support Email:</label>
+                </textBox>
+            </presentation>
+            <presentation id="CheckSupportUrlChrome">
+                <textBox refId="SupportUrlChrome">
+                    <label>Support URL:</label>
+                </textBox>
+            </presentation>
+            <presentation id="CheckPrivacyPolicyUrlChrome">
+                <textBox refId="PrivacyPolicyUrlChrome">
+                    <label>Privacy URL:</label>
+                </textBox>
+            </presentation>
+            <presentation id="CheckAboutUrlChrome">
+                <textBox refId="AboutUrlChrome">
+                    <label>About URL:</label>
                 </textBox>
             </presentation>
             <presentation id="CheckPrimaryColorChrome">

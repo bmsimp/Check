@@ -30,9 +30,11 @@ If some settings do not appear on your version, it means your organization's IT 
 You can customize the following properties:
 
 1. **Company Name** - Enter your organization's name. This appears in the extension interface and blocked page messages (displayed as "Protected by \[Company Name]").
-2. **Company URL** - Your company website URL (e.g., `https://yourcompany.com`). Used in extension branding and contact information. _(Firefox: required, Chrome/Edge: optional)_
-3. **Product Name** - What you want to call the extension (like "Contoso Security" instead of "Check"). This replaces the default "Check" branding throughout the interface.
-4. **Support Email** - Where users should go for help. This email address is used in the "Contact Admin" button when phishing sites are blocked.
+2. **Product Name** - What you want to call the extension (like "Contoso Security" instead of "Check"). This replaces the default "Check" branding throughout the interface.
+3. **Support Email** - Where users should go for help. This email address is used in the "Contact Admin" button when phishing sites are blocked.
+4. **Support URL** - URL opened by the popup **Support** link (for example, `https://support.yourcompany.com`).
+5. **Privacy Policy URL** (`privacyPolicyUrl`) - URL opened by the popup **Privacy** link (for example, `https://yourcompany.com/privacy`).
+6. **About URL** (`aboutUrl`) - URL opened by the popup **About** link. Leave empty to use the built-in extension About page.
 
 ## Visual Customization
 
@@ -60,6 +62,9 @@ The branding preview shows you exactly how your customizations will appear to us
    * Logo (upload or provide URL)
    * Primary Color
    * Support Email
+   * Support URL
+   * Privacy Policy URL
+   * About URL
 4. Click "Save"
 
 Your branding will be immediately applied to all components.
@@ -78,7 +83,10 @@ For enterprise deployments using Windows Group Policy:
     "companyName": "Your Company",
     "logoUrl": "https://example.com/logo.png",
     "primaryColor": "#FF5733",
-    "supportEmail": "security@example.com"
+    "supportEmail": "security@example.com",
+    "supportUrl": "https://support.example.com",
+    "privacyPolicyUrl": "https://example.com/privacy",
+    "aboutUrl": "https://example.com/about"
   }
 }
 ```
@@ -106,9 +114,11 @@ For Firefox deployments, configure branding through the `policies.json` file:
         "check@cyberdrain.com": {
           "customBranding": {
             "companyName": "Your Company",
-            "companyURL": "https://yourcompany.com",
             "productName": "Security Extension",
             "supportEmail": "security@example.com",
+            "supportUrl": "https://support.example.com",
+            "privacyPolicyUrl": "https://example.com/privacy",
+            "aboutUrl": "https://example.com/about",
             "primaryColor": "#FF5733",
             "logoUrl": "https://example.com/logo.png"
           }
@@ -137,7 +147,10 @@ For organizations using Microsoft Intune with Chrome/Edge:
     "companyName": "Your Company",
     "logoUrl": "https://example.com/logo.png",
     "primaryColor": "#FF5733",
-    "supportEmail": "security@example.com"
+    "supportEmail": "security@example.com",
+    "supportUrl": "https://support.example.com",
+    "privacyPolicyUrl": "https://example.com/privacy",
+    "aboutUrl": "https://example.com/about"
   }
 }
 ```
@@ -201,7 +214,6 @@ Enterprise policies always take precedence over manual settings.
 
 * Uses extension ID: `check@cyberdrain.com`
 * Configuration is managed through `policies.json` file
-* Supports additional `companyURL` property
 * Policies file location varies by operating system
 
 ### Chrome & Edge
@@ -290,7 +302,10 @@ Logo URL: https://assets.globalmfg.com/security/gmi-logo-48.png
     "productName": "Contoso Defender",
     "logoUrl": "https://contoso.com/assets/logo.png",
     "primaryColor": "#0078D4",
-    "supportEmail": "security@contoso.com"
+    "supportEmail": "security@contoso.com",
+    "supportUrl": "https://support.contoso.com",
+    "privacyPolicyUrl": "https://contoso.com/privacy",
+    "aboutUrl": "https://contoso.com/about"
   }
 }
 ```
@@ -305,11 +320,13 @@ Logo URL: https://assets.globalmfg.com/security/gmi-logo-48.png
         "check@cyberdrain.com": {
           "customBranding": {
             "companyName": "Contoso Corporation",
-            "companyURL": "https://contoso.com",
             "productName": "Contoso Defender",
             "logoUrl": "https://contoso.com/assets/logo.png",
             "primaryColor": "#0078D4",
-            "supportEmail": "security@contoso.com"
+            "supportEmail": "security@contoso.com",
+            "supportUrl": "https://support.contoso.com",
+            "privacyPolicyUrl": "https://contoso.com/privacy",
+            "aboutUrl": "https://contoso.com/about"
           }
         }
       }

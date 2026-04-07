@@ -28,6 +28,7 @@ This folder contains enterprise deployment resources for the Check Microsoft 365
 - **Chrome/Edge Deployment**: See `Deploy-Windows-Chrome-and-Edge.ps1` for Windows, `macos-linux/` for macOS/Linux
 - **Firefox Deployment**: See `firefox/policies.json` template and [Firefox Deployment Guide](../docs/deployment/firefox-deployment.md)
 - **Configuration Schema**: See `../config/managed_schema.json` for all available settings
+- **Webhook Configuration**: See `../docs/webhooks.md` for webhook payloads and supported event types
 
 ## Security Considerations
 

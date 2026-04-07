@@ -30,8 +30,8 @@ if (window.checkExtensionLoaded) {
   let developerConsoleLoggingEnabled = false; // Cache for developer console logging setting
   let showingBanner = false; // Flag to prevent DOM monitoring loops when showing banners
   let escalatedToBlock = false; // Flag to indicate page has been escalated to block - stop all monitoring
-  const MAX_SCANS = 5; // Prevent infinite scanning - reduced for performance
-  const SCAN_COOLDOWN = 1200; // 1200ms between scans - increased for performance
+  const MAX_SCANS = 8; // Allow more rescans for dynamically loaded content
+  const SCAN_COOLDOWN = 800; // 800ms between scans - allow faster rescans for dynamic content
   const THREAT_TRIGGERED_COOLDOWN = 500; // Shorter cooldown for threat-triggered re-scans
   const WARNING_THRESHOLD = 3; // Block if 4+ warning threats found (escalation threshold)
   const PHISHING_PROCESSING_TIMEOUT = 10000; // 10 second timeout for phishing indicator processing
@@ -583,9 +583,25 @@ if (window.checkExtensionLoaded) {
    */
   async function loadDeveloperConsoleLoggingSetting() {
     try {
+      // Request config from background to get merged enterprise + local config
       const config = await new Promise((resolve) => {
-        chrome.storage.local.get(["config"], (result) => {
-          resolve(result.config || {});
+        chrome.runtime.sendMessage({ type: "GET_CONFIG" }, (response) => {
+          if (chrome.runtime.lastError) {
+            logger.log(
+              `[M365-Protection] Error getting config from background: ${chrome.runtime.lastError.message}`
+            );
+            // Fallback to local storage if background not available
+            chrome.storage.local.get(["config"], (result) => {
+              resolve(result.config || {});
+            });
+          } else if (!response || !response.success) {
+            // Fallback to local storage if response invalid
+            chrome.storage.local.get(["config"], (result) => {
+              resolve(result.config || {});
+            });
+          } else {
+            resolve(response.config);
+          }
         });
       });
 
@@ -1326,7 +1342,12 @@ if (window.checkExtensionLoaded) {
         try {
           let found = false;
 
-          if (element.type === "source_content") {
+          if (element.type === "code_driven" && element.code_logic) {
+            found = evaluatePrimitivePortable(pageSource, element.code_logic, {
+              cache: new Map(),
+              currentUrl: window.location.href,
+            });
+          } else if (element.type === "source_content") {
             const regex = new RegExp(element.pattern, "i");
             found = regex.test(pageSource);
           } else if (element.type === "page_title") {
@@ -1701,15 +1722,6 @@ if (window.checkExtensionLoaded) {
    */
   function setupDynamicScriptMonitoring() {
     try {
-      // Override eval to detect dynamic script execution
-      const originalEval = window.eval;
-      window.eval = function (code) {
-        scanDynamicScript(code, "eval").catch((error) => {
-          logger.warn("Dynamic script scan error (eval):", error);
-        });
-        return originalEval.call(this, code);
-      };
-
       // Override Function constructor
       const originalFunction = window.Function;
       window.Function = function () {
@@ -2055,7 +2067,7 @@ if (window.checkExtensionLoaded) {
       );
       const resources = [...source.matchAll(resourceRegex)].map((m) => m[1]);
 
-      if (resources.length === 0) return false;
+      if (resources.length === 0) return true;
 
       // Check if ALL resources are from allowed domains
       return resources.every((res) =>
@@ -2174,6 +2186,345 @@ if (window.checkExtensionLoaded) {
     }
   }
 
+  function getPortableDetectionPrimitives() {
+    return {
+      substring_present: (source, params) => {
+        const lower = source.toLowerCase();
+        return (params.values || []).some((val) =>
+          lower.includes(String(val).toLowerCase())
+        );
+      },
+      all_substrings_present: (source, params) => {
+        const lower = source.toLowerCase();
+        return (params.values || []).every((val) =>
+          lower.includes(String(val).toLowerCase())
+        );
+      },
+      substring_proximity: (source, params) => {
+        const lower = source.toLowerCase();
+        const word1 = String(params.word1 || "").toLowerCase();
+        const word2 = String(params.word2 || "").toLowerCase();
+        const maxDistance = params.max_distance || 0;
+
+        const idx1 = lower.indexOf(word1);
+        if (idx1 === -1) return false;
+
+        const searchStart = Math.max(0, idx1 - maxDistance);
+        const searchEnd = Math.min(
+          lower.length,
+          idx1 + word1.length + maxDistance
+        );
+        const chunk = lower.slice(searchStart, searchEnd);
+        return chunk.includes(word2);
+      },
+      substring_count: (source, params) => {
+        const lower = source.toLowerCase();
+        const count = (params.substrings || []).filter((sub) =>
+          lower.includes(String(sub).toLowerCase())
+        ).length;
+        return count >= (params.min_count || 0) && count <= (params.max_count || Infinity);
+      },
+      has_but_not: (source, params, context) => {
+        const lower = source.toLowerCase();
+        if (params.check_url_only && context.currentUrl) {
+          const urlLower = context.currentUrl.toLowerCase();
+          const hasRequired = (params.required || []).some((req) =>
+            urlLower.includes(String(req).toLowerCase())
+          );
+          if (!hasRequired) return false;
+          const hasProhibited = (params.prohibited || []).some((pro) =>
+            urlLower.includes(String(pro).toLowerCase())
+          );
+          return !hasProhibited;
+        }
+
+        const hasRequired = (params.required || []).some((req) =>
+          lower.includes(String(req).toLowerCase())
+        );
+        if (!hasRequired) return false;
+        const hasProhibited = (params.prohibited || []).some((pro) =>
+          lower.includes(String(pro).toLowerCase())
+        );
+        return !hasProhibited;
+      },
+      pattern_count: (source, params) => {
+        let totalCount = 0;
+        for (const pattern of params.patterns || []) {
+          const regex = new RegExp(pattern, params.flags || "gi");
+          const matches = source.match(regex);
+          totalCount += matches ? matches.length : 0;
+        }
+        return (
+          totalCount >= (params.min_count || 0) &&
+          totalCount <= (params.max_count || Infinity)
+        );
+      },
+      word_density: (source, params) => {
+        const lower = source.toLowerCase();
+        let totalCount = 0;
+        for (const word of params.words || []) {
+          const regex = new RegExp(`\\b${String(word).toLowerCase()}\\b`, "g");
+          const matches = lower.match(regex);
+          totalCount += matches ? matches.length : 0;
+        }
+        const density = totalCount / Math.max(1, source.length / 1000);
+        return density >= (params.min_density || 0);
+      },
+      substring_before: (source, params) => {
+        const lower = source.toLowerCase();
+        const idx1 = lower.indexOf(String(params.first || "").toLowerCase());
+        const idx2 = lower.indexOf(String(params.second || "").toLowerCase());
+        return idx1 !== -1 && idx2 !== -1 && idx1 < idx2;
+      },
+      substring_in_range: (source, params) => {
+        const lower = source.toLowerCase();
+        const idx = lower.indexOf(String(params.substring || "").toLowerCase());
+        if (idx === -1) return false;
+        return idx >= (params.min_position || 0) && idx <= (params.max_position || Infinity);
+      },
+      all_of: (source, params, context) => {
+        return (params.operations || []).every((op) =>
+          evaluatePrimitivePortable(source, op, context)
+        );
+      },
+      any_of: (source, params, context) => {
+        return (params.operations || []).some((op) =>
+          evaluatePrimitivePortable(source, op, context)
+        );
+      },
+      resource_pattern: (source, params) => {
+        const pattern = new RegExp(params.pattern, params.flags || "i");
+        const urlRegex = /(?:src|href|action)=["']([^"']+)["']/gi;
+        const urls = [...source.matchAll(urlRegex)].map((m) => m[1]);
+        const matchCount = urls.filter((url) => pattern.test(url)).length;
+        return (
+          matchCount >= (params.min_count || 1) &&
+          matchCount <= (params.max_count || Infinity)
+        );
+      },
+      resource_from_domain: (source, params) => {
+        const resourceType = params.resource_type;
+        const allowedDomains = params.allowed_domains || [];
+        const resourceRegex = new RegExp(
+          `(?:src|href)=["']([^"']*${resourceType}[^"']*)["']`,
+          "gi"
+        );
+        const resources = [...source.matchAll(resourceRegex)].map((m) => m[1]);
+        if (resources.length === 0) return true;
+        return resources.every((res) =>
+          allowedDomains.some((domain) => res.includes(domain))
+        );
+      },
+      multi_proximity: (source, params) => {
+        const lower = source.toLowerCase();
+        for (const pair of params.pairs || []) {
+          const word1 = String(pair.words?.[0] || "").toLowerCase();
+          const word2 = String(pair.words?.[1] || "").toLowerCase();
+          const maxDist = pair.max_distance || 0;
+          let idx1 = -1;
+          while ((idx1 = lower.indexOf(word1, idx1 + 1)) !== -1) {
+            const searchStart = Math.max(0, idx1 - maxDist);
+            const searchEnd = Math.min(
+              lower.length,
+              idx1 + word1.length + maxDist
+            );
+            if (lower.slice(searchStart, searchEnd).includes(word2)) {
+              return true;
+            }
+          }
+        }
+        return false;
+      },
+      form_action_check: (source, params) => {
+        const formRegex = /<form[^>]*action=["']([^"']*)["'][^>]*>/gi;
+        const actions = [...source.matchAll(formRegex)].map((m) => m[1]);
+        if (actions.length === 0) return false;
+        const requiredDomains = params.required_domains || [];
+        const suspiciousForms = actions.filter(
+          (action) => !requiredDomains.some((domain) => action.includes(domain))
+        );
+        return suspiciousForms.length > 0;
+      },
+      obfuscation_check: (source, params) => {
+        let matchCount = 0;
+        for (const indicator of params.indicators || []) {
+          if (source.includes(indicator)) {
+            matchCount++;
+          }
+        }
+        return matchCount >= (params.min_matches || 1);
+      },
+      not_if_contains: (source, params) => {
+        const lower = source.toLowerCase();
+        const hasProhibited = (params.prohibited || []).some((pro) =>
+          lower.includes(String(pro).toLowerCase())
+        );
+        return !hasProhibited;
+      },
+    };
+  }
+
+  const portableDetectionPrimitives = getPortableDetectionPrimitives();
+
+  function evaluatePrimitivePortable(source, operation, context = {}) {
+    const primitive = portableDetectionPrimitives[operation?.type];
+    if (!primitive) {
+      return false;
+    }
+
+    try {
+      const cacheKey = `${operation.type}:${JSON.stringify(operation)}`;
+      if (context.cache && context.cache.has(cacheKey)) {
+        return context.cache.get(cacheKey);
+      }
+
+      const result = primitive(source, operation, context);
+      const finalResult = operation.invert ? !result : result;
+      if (context.cache) {
+        context.cache.set(cacheKey, finalResult);
+      }
+      return finalResult;
+    } catch {
+      return false;
+    }
+  }
+
+  function evaluateIndicatorPortable(indicator, pageSource, pageText, currentUrl) {
+    let matches = false;
+    let matchDetails = "";
+
+    if (indicator.code_driven === true && indicator.code_logic) {
+      matches = evaluatePrimitivePortable(pageSource, indicator.code_logic, {
+        cache: new Map(),
+        currentUrl,
+      });
+      if (matches) {
+        matchDetails = "primitive match";
+      }
+
+      const lowerSource = pageSource.toLowerCase();
+
+      if (!matches && indicator.code_logic.type === "substring") {
+        matches = (indicator.code_logic.substrings || []).every((sub) =>
+          pageSource.includes(sub)
+        );
+        if (matches) matchDetails = "page source (substring match)";
+      } else if (!matches && indicator.code_logic.type === "substring_not") {
+        matches =
+          (indicator.code_logic.substrings || []).every((sub) =>
+            pageSource.includes(sub)
+          ) &&
+          (indicator.code_logic.not_substrings || []).every(
+            (sub) => !pageSource.includes(sub)
+          );
+        if (matches) matchDetails = "page source (substring + not match)";
+      } else if (!matches && indicator.code_logic.type === "allowlist") {
+        const isAllowlisted = (indicator.code_logic.allowlist || []).some(
+          (phrase) => lowerSource.includes(String(phrase).toLowerCase())
+        );
+        if (!isAllowlisted && indicator.code_logic.optimized_pattern) {
+          const optPattern = new RegExp(
+            indicator.code_logic.optimized_pattern,
+            indicator.flags || "i"
+          );
+          if (optPattern.test(pageSource)) {
+            matches = true;
+            matchDetails = "page source (optimized regex)";
+          }
+        }
+      } else if (
+        !matches &&
+        indicator.code_logic.type === "substring_not_allowlist"
+      ) {
+        const substring = indicator.code_logic.substring;
+        const allowlist = indicator.code_logic.allowlist || [];
+        if (substring && pageSource.includes(substring)) {
+          const isAllowed = allowlist.some((allowed) =>
+            lowerSource.includes(String(allowed).toLowerCase())
+          );
+          if (!isAllowed) {
+            matches = true;
+            matchDetails = "page source (substring not in allowlist)";
+          }
+        }
+      } else if (
+        !matches &&
+        indicator.code_logic.type === "substring_or_regex"
+      ) {
+        const substrings = indicator.code_logic.substrings || [];
+        for (const sub of substrings) {
+          if (lowerSource.includes(String(sub).toLowerCase())) {
+            matches = true;
+            matchDetails = "page source (substring match)";
+            break;
+          }
+        }
+        if (!matches && indicator.code_logic.regex) {
+          const pattern = new RegExp(
+            indicator.code_logic.regex,
+            indicator.code_logic.flags || "i"
+          );
+          if (pattern.test(pageSource)) {
+            matches = true;
+            matchDetails = "page source (regex match)";
+          }
+        }
+      } else if (
+        !matches &&
+        indicator.code_logic.type === "substring_with_exclusions"
+      ) {
+        const excludeList = indicator.code_logic.exclude_if_contains || [];
+        const hasExclusion = excludeList.some((excl) =>
+          lowerSource.includes(String(excl).toLowerCase())
+        );
+        if (!hasExclusion) {
+          if (indicator.code_logic.match_any) {
+            matches = indicator.code_logic.match_any.some((phrase) =>
+              lowerSource.includes(String(phrase).toLowerCase())
+            );
+            if (matches) {
+              matchDetails = "page source (substring with exclusions)";
+            }
+          } else if (indicator.code_logic.match_pattern_parts) {
+            const parts = indicator.code_logic.match_pattern_parts;
+            matches = parts.every((partGroup) =>
+              partGroup.some((part) =>
+                lowerSource.includes(String(part).toLowerCase())
+              )
+            );
+            if (matches) {
+              matchDetails = "page source (pattern parts with exclusions)";
+            }
+          }
+        }
+      }
+    } else if (indicator.pattern) {
+      const pattern = new RegExp(indicator.pattern, indicator.flags || "i");
+      if (pattern.test(pageSource)) {
+        matches = true;
+        matchDetails = "page source";
+      } else if (pattern.test(pageText)) {
+        matches = true;
+        matchDetails = "page text";
+      } else if (pattern.test(currentUrl)) {
+        matches = true;
+        matchDetails = "URL";
+      }
+
+      if (!matches && indicator.additional_checks) {
+        for (const check of indicator.additional_checks) {
+          if (pageSource.includes(check) || pageText.includes(check)) {
+            matches = true;
+            matchDetails = "additional checks";
+            break;
+          }
+        }
+      }
+    }
+
+    return { matches, matchDetails };
+  }
+
   /**
    * Process phishing indicators using Web Worker for background processing
    */
@@ -2187,6 +2538,10 @@ if (window.checkExtensionLoaded) {
       try {
         // Create inline Web Worker for background regex processing
         const workerCode = `
+          ${getPortableDetectionPrimitives.toString()}
+          ${evaluatePrimitivePortable.toString()}
+          ${evaluateIndicatorPortable.toString()}
+
           self.onmessage = function(e) {
             const { indicators, pageSource, pageText, currentUrl } = e.data;
             const threats = [];
@@ -2207,37 +2562,14 @@ if (window.checkExtensionLoaded) {
                 }
 
                 try {
-                  let matches = false;
-                  let matchDetails = "";
-
-                  const pattern = new RegExp(indicator.pattern, indicator.flags || "i");
-
-                  // Test against page source
-                  if (pattern.test(pageSource)) {
-                    matches = true;
-                    matchDetails = "page source";
-                  }
-                  // Test against visible text
-                  else if (pattern.test(pageText)) {
-                    matches = true;
-                    matchDetails = "page text";
-                  }
-                  // Test against URL
-                  else if (pattern.test(currentUrl)) {
-                    matches = true;
-                    matchDetails = "URL";
-                  }
-
-                  // Handle additional_checks
-                  if (!matches && indicator.additional_checks) {
-                    for (const check of indicator.additional_checks) {
-                      if (pageSource.includes(check) || pageText.includes(check)) {
-                        matches = true;
-                        matchDetails = "additional checks";
-                        break;
-                      }
-                    }
-                  }
+                  const evaluation = evaluateIndicatorPortable(
+                    indicator,
+                    pageSource,
+                    pageText,
+                    currentUrl
+                  );
+                  const matches = evaluation.matches;
+                  const matchDetails = evaluation.matchDetails;
 
                   if (matches) {
                     const threat = {
@@ -2392,7 +2724,7 @@ if (window.checkExtensionLoaded) {
         logger.log(`   ${i + 1}. ${ind.id}: ${patternPreview} (${ind.severity})`);
       });
 
-      // If forceMainThreadPhishingProcessing is enabled, skip Web Worker and use main thread directly
+      // If forceMainThreadPhishingProcessing is enabled, skip Web Worker and use main thread directly.
       if (forceMainThreadPhishingProcessing) {
         logger.log(
           "⏱️ DEBUG: Forcing main thread phishing processing (Web Worker disabled by UI toggle)"
@@ -2532,181 +2864,14 @@ if (window.checkExtensionLoaded) {
                 let matches = false;
                 let matchDetails = "";
 
-                // Modular code-driven logic if flagged in rules file
-                if (indicator.code_driven === true && indicator.code_logic) {
-                  if (DetectionPrimitives[indicator.code_logic.type]) {
-                    try {
-                      matches = evaluatePrimitive(
-                        pageSource,
-                        indicator.code_logic,
-                        { cache: new Map(), currentUrl: window.location.href }
-                      );
-                      if (matches) matchDetails = "primitive match";
-                    } catch (primitiveError) {
-                      logger.warn(
-                        `Primitive evaluation failed for ${indicator.id}, falling back:`,
-                        primitiveError.message
-                      );
-                      // Fall through to legacy code-driven logic below
-                    }
-                  }
-                  if (indicator.code_logic.type === "substring") {
-                    // All substrings must be present
-                    matches = (indicator.code_logic.substrings || []).every(
-                      (sub) => pageSource.includes(sub)
-                    );
-                    if (matches) matchDetails = "page source (substring match)";
-                  } else if (indicator.code_logic.type === "substring_not") {
-                    // All substrings must be present, and all not_substrings must be absent
-                    matches =
-                      (indicator.code_logic.substrings || []).every((sub) =>
-                        pageSource.includes(sub)
-                      ) &&
-                      (indicator.code_logic.not_substrings || []).every(
-                        (sub) => !pageSource.includes(sub)
-                      );
-                    if (matches)
-                      matchDetails = "page source (substring + not match)";
-                  } else if (indicator.code_logic.type === "allowlist") {
-                    // If any allowlist phrase is present, skip
-                    const lowerSource = pageSource.toLowerCase();
-                    const isAllowlisted = (
-                      indicator.code_logic.allowlist || []
-                    ).some((phrase) => lowerSource.includes(phrase));
-                    if (!isAllowlisted) {
-                      // Use optimized regex from rules file
-                      if (indicator.code_logic.optimized_pattern) {
-                        const optPattern = new RegExp(
-                          indicator.code_logic.optimized_pattern,
-                          indicator.flags || "i"
-                        );
-                        if (optPattern.test(pageSource)) {
-                          matches = true;
-                          matchDetails = "page source (optimized regex)";
-                        }
-                      }
-                    }
-                  } else if (
-                    indicator.code_logic.type === "substring_not_allowlist"
-                  ) {
-                    // Check if substring is present, then verify it's not from an allowed source
-                    const substring = indicator.code_logic.substring;
-                    const allowlist = indicator.code_logic.allowlist || [];
-
-                    if (substring && pageSource.includes(substring)) {
-                      // Substring found, now check if any allowlisted domain is also present
-                      const lowerSource = pageSource.toLowerCase();
-                      const isAllowed = allowlist.some((allowed) =>
-                        lowerSource.includes(allowed.toLowerCase())
-                      );
-
-                      if (!isAllowed) {
-                        matches = true;
-                        matchDetails =
-                          "page source (substring not in allowlist)";
-                      }
-                    }
-                  } else if (
-                    indicator.code_logic.type === "substring_or_regex"
-                  ) {
-                    // Try fast substring search first, fall back to regex
-                    const substrings = indicator.code_logic.substrings || [];
-                    const lowerSource = pageSource.toLowerCase();
-
-                    // Fast path: check if any substring is present
-                    for (const sub of substrings) {
-                      if (lowerSource.includes(sub.toLowerCase())) {
-                        matches = true;
-                        matchDetails = "page source (substring match)";
-                        break;
-                      }
-                    }
-
-                    // Fallback: use regex if no substring matched
-                    if (!matches && indicator.code_logic.regex) {
-                      const pattern = new RegExp(
-                        indicator.code_logic.regex,
-                        indicator.code_logic.flags || "i"
-                      );
-                      if (pattern.test(pageSource)) {
-                        matches = true;
-                        matchDetails = "page source (regex match)";
-                      }
-                    }
-                  } else if (
-                    indicator.code_logic.type === "substring_with_exclusions"
-                  ) {
-                    // Check for matching patterns but exclude if exclusion phrases are present
-                    const lowerSource = pageSource.toLowerCase();
-
-                    // First check exclusions - if any found, skip this rule entirely
-                    const excludeList =
-                      indicator.code_logic.exclude_if_contains || [];
-                    const hasExclusion = excludeList.some((excl) =>
-                      lowerSource.includes(excl.toLowerCase())
-                    );
-
-                    if (!hasExclusion) {
-                      // No exclusions found, now check for matches
-                      if (indicator.code_logic.match_any) {
-                        // Simple match - check if any phrase is present
-                        matches = indicator.code_logic.match_any.some(
-                          (phrase) => lowerSource.includes(phrase.toLowerCase())
-                        );
-                        if (matches)
-                          matchDetails =
-                            "page source (substring with exclusions)";
-                      } else if (indicator.code_logic.match_pattern_parts) {
-                        // Complex match - all pattern parts must be present
-                        const parts = indicator.code_logic.match_pattern_parts;
-                        matches = parts.every((partGroup) =>
-                          partGroup.some((part) =>
-                            lowerSource.includes(part.toLowerCase())
-                          )
-                        );
-                        if (matches)
-                          matchDetails =
-                            "page source (pattern parts with exclusions)";
-                      }
-                    }
-                  }
-                } else {
-                  // Default: regex-driven logic
-                  const pattern = new RegExp(
-                    indicator.pattern,
-                    indicator.flags || "i"
-                  );
-
-                  // Test against page source
-                  if (pattern.test(pageSource)) {
-                    matches = true;
-                    matchDetails = "page source";
-                  }
-                  // Test against visible text
-                  else if (pattern.test(pageText)) {
-                    matches = true;
-                    matchDetails = "page text";
-                  }
-                  // Test against URL
-                  else if (pattern.test(currentUrl)) {
-                    matches = true;
-                    matchDetails = "URL";
-                  }
-
-                  // Handle additional_checks
-                  if (!matches && indicator.additional_checks) {
-                    for (const check of indicator.additional_checks) {
-                      if (
-                        pageSource.includes(check) ||
-                        pageText.includes(check)
-                      ) {
-                        matches = true;
-                        matchDetails = "additional checks";
-                        break;
-                      }
-                    }
-                  }
-                }
+                const evaluation = evaluateIndicatorPortable(
+                  indicator,
+                  pageSource,
+                  pageText,
+                  currentUrl
+                );
+                matches = evaluation.matches;
+                matchDetails = evaluation.matchDetails;
 
                 // Handle context_required field for conditional detection
                 if (matches && indicator.context_required) {
@@ -3944,7 +4109,136 @@ if (window.checkExtensionLoaded) {
         }`
       );
 
-      // Step 4: Pre-check domain for obvious non-threats only
+      // Step 4: Check for domain squatting (typosquatting, homoglyphs, etc.)
+      // This runs BEFORE phishing detection to catch domain-based threats early
+      try {
+        const domainSquattingResult = await chrome.runtime.sendMessage({
+          type: "check_domain_squatting",
+          domain: window.location.hostname
+        });
+        
+        if (domainSquattingResult?.success && domainSquattingResult.result?.detected) {
+          const squattingData = domainSquattingResult.result;
+          logger.warn(`⚠️ DOMAIN SQUATTING DETECTED:`);
+          logger.warn(`  Test Domain: ${squattingData.testDomain}`);
+          logger.warn(`  Protected Domain: ${squattingData.protectedDomain}`);
+          logger.warn(`  Techniques: ${squattingData.techniques.map(t => t.technique).join(', ')}`);
+          logger.warn(`  Severity: ${squattingData.severity}`);
+          logger.warn(`  Confidence: ${(squattingData.confidence * 100).toFixed(1)}%`);
+          logger.warn(`  Action: ${squattingData.action || 'warn'}`);
+          
+          // Check if notifications should be shown
+          const showNotifications = config.showNotifications !== false;
+          
+          // Determine if we should block the page
+          // Requires: 1) enablePageBlocking is ON, 2) domain_squatting action is "block"
+          logger.debug(`  enablePageBlocking: ${config.enablePageBlocking}`);
+          logger.debug(`  squattingData.action: ${squattingData.action}`);
+          const shouldBlock = squattingData.action === 'block' && 
+                             config.enablePageBlocking !== false;
+          logger.debug(`  shouldBlock: ${shouldBlock}`);
+          
+          // Log domain squatting detection
+          logProtectionEvent({
+            type: "threat_detected",
+            action: shouldBlock ? "blocked" : "warned",
+            url: location.href,
+            origin: currentOrigin,
+            reason: `Domain squatting detected: ${squattingData.techniques.map(t => t.description).join('; ')}`,
+            severity: squattingData.severity,
+            redirectTo: null,
+            clientId: null,
+            ruleType: "domain_squatting",
+            squattingDetails: squattingData
+          });
+          
+          // Send CIPP report for domain squatting detection
+          sendCippReport({
+            type: "domain_squatting_detected",
+            url: defangUrl(location.href),
+            origin: currentOrigin,
+            testDomain: squattingData.testDomain,
+            protectedDomain: squattingData.protectedDomain,
+            techniques: squattingData.techniques.map(t => ({
+              ...t
+            })),
+            severity: squattingData.severity,
+            confidence: squattingData.confidence,
+            action: shouldBlock ? "blocked" : "warned",
+            reason: `Domain squatting detected: ${squattingData.techniques.map(t => t.description).join('; ')}`
+          });
+          
+          // Send domain_squatting_detected webhook
+          chrome.runtime
+            .sendMessage({
+              type: "send_webhook",
+              webhookType: "domain_squatting_detected",
+              data: {
+                url: defangUrl(location.href),
+                testDomain: squattingData.testDomain,
+                protectedDomain: squattingData.protectedDomain,
+                techniques: squattingData.techniques.map(t => ({
+                  technique: t.technique,
+                  description: t.description
+                })),
+                severity: squattingData.severity,
+                confidence: squattingData.confidence,
+                action: shouldBlock ? "blocked" : "warned",
+                reason: `Domain squatting detected: ${squattingData.techniques.map(t => t.description).join('; ')}`
+              },
+            })
+            .catch((err) => {
+              logger.debug("Failed to send domain squatting webhook:", err);
+            });
+          
+          if (shouldBlock) {
+            // Block the page - redirect to blocked page with domain squatting context
+            const techniquesDesc = squattingData.techniques.map(t => 
+              `${t.technique}: ${t.description}`
+            ).join('; ');
+            
+            await showBlockingOverlay(
+              `Domain Squatting: This site closely resembles "${squattingData.protectedDomain}" but is not the legitimate site`,
+              {
+                type: "domain_squatting",
+                severity: squattingData.severity,
+                testDomain: squattingData.testDomain,
+                protectedDomain: squattingData.protectedDomain,
+                techniques: squattingData.techniques,
+                confidence: squattingData.confidence,
+                reason: `Domain squatting detected: ${techniquesDesc}`,
+                detectionMethod: "domain-squatting",
+                detectionTime: Date.now()
+              }
+            );
+            return; // Stop processing, page is blocked
+          } else if (showNotifications) {
+            // Show warning banner for domain squatting (only if notifications enabled)
+            const techniquesDesc = squattingData.techniques.map(t => 
+              `${t.technique}: ${t.description}`
+            ).join('\n');
+            
+            showWarningBanner(
+              `⚠️ POTENTIAL DOMAIN SQUATTING: This domain closely resembles "${squattingData.protectedDomain}"`,
+              {
+                type: "domain_squatting",
+                severity: squattingData.severity,
+                reason: `Domain squatting techniques detected:\n${techniquesDesc}`,
+                protectedDomain: squattingData.protectedDomain,
+                confidence: squattingData.confidence,
+                techniques: squattingData.techniques
+              }
+            );
+          }
+          
+          // If we showed a warning but not blocking, continue with phishing detection
+          // If we blocked, we already returned above
+        }
+      } catch (squattingError) {
+        logger.debug("Domain squatting check failed or disabled:", squattingError.message);
+      }
+
+      // Step 5: Pre-check domain for obvious non-threats only
       // NOTE: We removed the restrictive domain check that was blocking training platforms
       // like KnowBe4. Phishing simulations use legitimate domains but copy Microsoft UI.
       // Let content-based detection handle all cases.
@@ -3956,7 +4250,7 @@ if (window.checkExtensionLoaded) {
         `Analyzing domain "${currentDomain}" - proceeding with content-based detection`
       );
 
-      // Step 5: Check if page is an MS logon page (using rule file requirements)
+      // Step 6: Check if page is an MS logon page (using rule file requirements)
       const msDetection = detectMicrosoftElements();
       if (!msDetection.isLogonPage) {
         // Check if page has ANY Microsoft-related elements before running expensive phishing indicators
@@ -5009,11 +5303,16 @@ if (window.checkExtensionLoaded) {
 
         const redirectHostname = extractRedirectHostname(location.href);
         const clientInfo = await extractClientInfo(location.href);
+        const threatAction =
+          severity === "high" && protectionEnabled ? "blocked" : "warned";
+        const threatEventType =
+          threatAction === "blocked" || threatAction === "warned"
+            ? "threat_detected"
+            : "threat_detected_no_action";
 
         logProtectionEvent({
-          type: protectionEnabled
-            ? "threat_detected"
-            : "threat_detected_no_action",
+          type: threatEventType,
+          action: threatAction,
           url: location.href,
           threatLevel: severity,
           reason: reason,
@@ -5342,6 +5641,8 @@ if (window.checkExtensionLoaded) {
       });
 
       // Fallback: Check periodically for content that might have loaded without triggering observer
+      let fallbackCheckCount = 0;
+      const MAX_FALLBACK_CHECKS = 5; // Allow up to 5 fallback checks
       const checkInterval = setInterval(() => {
         // Stop if page has been escalated to block
         if (escalatedToBlock) {
@@ -5360,17 +5661,27 @@ if (window.checkExtensionLoaded) {
           return;
         }
 
+        fallbackCheckCount++;
         const currentElementCount = document.querySelectorAll("*").length;
         const hasSignificantContent = document.body?.textContent?.length > 1000;
 
         if (hasSignificantContent && currentElementCount > 50) {
           logger.log(
-            "⏰ Fallback timer detected significant content - re-running analysis"
+            `⏰ Fallback timer detected significant content - re-running analysis (check ${fallbackCheckCount}/${MAX_FALLBACK_CHECKS})`
           );
-          clearInterval(checkInterval);
           runProtection(true);
+          
+          // Stop after MAX_FALLBACK_CHECKS successful rescans
+          if (fallbackCheckCount >= MAX_FALLBACK_CHECKS) {
+            logger.log("⏰ Maximum fallback checks reached - stopping");
+            clearInterval(checkInterval);
+          }
+        } else if (fallbackCheckCount >= MAX_FALLBACK_CHECKS) {
+          // Stop after MAX_FALLBACK_CHECKS attempts even if no significant content
+          logger.debug("⏰ Maximum fallback check attempts reached - stopping");
+          clearInterval(checkInterval);
         }
-      }, 2000);
+      }, 1500); // Check every 1.5 seconds
 
       // Stop monitoring after 30 seconds to prevent resource drain
       setTimeout(() => {
@@ -5482,9 +5793,30 @@ if (window.checkExtensionLoaded) {
       );
 
       // Immediately redirect to blocking page - no user override option
-      location.replace(blockingPageUrl);
+      try {
+        location.replace(blockingPageUrl);
+        logger.log("Redirected to Chrome blocking page");
+      } catch (redirectError) {
+        logger.warn(
+          "Direct blocked page redirect failed, attempting background tab redirect:",
+          redirectError.message
+        );
 
-      logger.log("Redirected to Chrome blocking page");
+        const redirectResponse = await chrome.runtime.sendMessage({
+          type: "REDIRECT_TO_BLOCKED_PAGE",
+          url: blockingPageUrl,
+        });
+
+        if (redirectResponse?.success) {
+          logger.log("Redirected to blocking page via background script");
+          return;
+        }
+
+        throw new Error(
+          redirectResponse?.error ||
+            "Background redirect failed with unknown error"
+        );
+      }
     } catch (error) {
       logger.error("Failed to redirect to blocking page:", error.message);
 
@@ -5509,17 +5841,58 @@ if (window.checkExtensionLoaded) {
         // CRITICAL: Register overlay before adding to DOM
         registerInjectedElement(overlay);
 
-        overlay.innerHTML = `
-          <div style="max-width: 600px; padding: 40px; text-align: center; font-family: system-ui, -apple-system, sans-serif;">
-            <div style="font-size: 64px; color: #d32f2f; margin-bottom: 24px;">🛡️</div>
-            <h1 style="color: #d32f2f; margin: 0 0 16px 0;">Phishing Site Blocked</h1>
-            <p><strong>Microsoft 365 login page detected on suspicious domain.</strong></p>
-            <p>This site may be attempting to steal your credentials and has been blocked for your protection.</p>
-            <div style="color: #777; font-size: 14px; margin-top: 24px;">Reason: ${reason}</div>
-            <div style="color: #777; font-size: 14px;">Blocked by: Check</div>
-            <div style="color: #777; font-size: 14px;">No override available - contact your administrator if this is incorrect</div>
-          </div>
-        `;
+        const content = document.createElement("div");
+        content.style.maxWidth = "600px";
+        content.style.padding = "40px";
+        content.style.textAlign = "center";
+        content.style.fontFamily = "system-ui, -apple-system, sans-serif";
+
+        const shield = document.createElement("div");
+        shield.style.fontSize = "64px";
+        shield.style.color = "#d32f2f";
+        shield.style.marginBottom = "24px";
+        shield.textContent = "🛡️";
+
+        const title = document.createElement("h1");
+        title.style.color = "#d32f2f";
+        title.style.margin = "0 0 16px 0";
+        title.textContent = "Phishing Site Blocked";
+
+        const paragraphStrong = document.createElement("p");
+        const strong = document.createElement("strong");
+        strong.textContent =
+          "Microsoft 365 login page detected on suspicious domain.";
+        paragraphStrong.appendChild(strong);
+
+        const paragraphDetails = document.createElement("p");
+        paragraphDetails.textContent =
+          "This site may be attempting to steal your credentials and has been blocked for your protection.";
+
+        const reasonLine = document.createElement("div");
+        reasonLine.style.color = "#777";
+        reasonLine.style.fontSize = "14px";
+        reasonLine.style.marginTop = "24px";
+        reasonLine.textContent = `Reason: ${reason}`;
+
+        const blockedByLine = document.createElement("div");
+        blockedByLine.style.color = "#777";
+        blockedByLine.style.fontSize = "14px";
+        blockedByLine.textContent = "Blocked by: Check";
+
+        const noOverrideLine = document.createElement("div");
+        noOverrideLine.style.color = "#777";
+        noOverrideLine.style.fontSize = "14px";
+        noOverrideLine.textContent =
+          "No override available - contact your administrator if this is incorrect";
+
+        content.appendChild(shield);
+        content.appendChild(title);
+        content.appendChild(paragraphStrong);
+        content.appendChild(paragraphDetails);
+        content.appendChild(reasonLine);
+        content.appendChild(blockedByLine);
+        content.appendChild(noOverrideLine);
+        overlay.appendChild(content);
 
         document.body.appendChild(overlay);
 
@@ -5580,12 +5953,27 @@ if (window.checkExtensionLoaded) {
       // Set flag to prevent DOM monitoring loops
       showingBanner = true;
 
-      // Fetch branding configuration (uniform pattern: storage only, like applyBrandingColors)
+      // Fetch branding configuration from background to get merged config
       const fetchBranding = () =>
         new Promise((resolve) => {
           try {
-            chrome.storage.local.get(["brandingConfig"], (result) => {
-              resolve(result?.brandingConfig || {});
+            chrome.runtime.sendMessage({ type: "GET_BRANDING_CONFIG" }, (response) => {
+              if (chrome.runtime.lastError) {
+                logger.log(
+                  `[M365-Protection] Error getting branding from background: ${chrome.runtime.lastError.message}`
+                );
+                // Fallback to local storage if background not available
+                chrome.storage.local.get(["brandingConfig"], (result) => {
+                  resolve(result?.brandingConfig || {});
+                });
+              } else if (!response || !response.success) {
+                // Fallback to local storage if response invalid
+                chrome.storage.local.get(["brandingConfig"], (result) => {
+                  resolve(result?.brandingConfig || {});
+                });
+              } else {
+                resolve(response.branding || {});
+              }
             });
           } catch (_) {
             resolve({});
@@ -5789,6 +6177,20 @@ if (window.checkExtensionLoaded) {
         bannerIcon = "🔍";
         bannerColor = "linear-gradient(135deg, #2196f3, #1976d2)"; // Blue for scanning
       }
+      // Check for domain squatting detection - tailored messaging
+      else if (
+        analysisData?.type === "domain_squatting" ||
+        reason.toLowerCase().includes("domain squatting") ||
+        reason.toLowerCase().includes("typosquat")
+      ) {
+        bannerTitle = "⚠️ Suspicious Domain Detected";
+        bannerIcon = "🔗";
+        bannerColor = "linear-gradient(135deg, #ff5722, #d84315)"; // Same orange-red as high risk warnings
+        // Override reason text for domain squatting to be more user-friendly
+        if (analysisData?.protectedDomain) {
+          reason = `This website's domain looks similar to "${analysisData.protectedDomain}" but is NOT the legitimate site. Be careful entering any credentials.`;
+        }
+      }
       // Check for rogue app detection
       else if (
         analysisData?.type === "rogue_app_on_legitimate_domain" ||
@@ -5808,28 +6210,98 @@ if (window.checkExtensionLoaded) {
         bannerColor = "linear-gradient(135deg, #ff5722, #d84315)"; // Orange-red for high risk
       }
 
-      // Layout: left branding slot, absolutely centered message block, dismiss button on right.
-      const bannerContent = `
-        <div style="position:relative;display:flex;align-items:center;gap:16px;min-height:56px;">
-          <div id="check-banner-left" style="display:flex;align-items:center;gap:12px;z-index:2;"></div>
-          <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;max-width:60%;z-index:1;pointer-events:none;">
-            <span style="display:block;font-size:24px;margin-bottom:4px;">${bannerIcon}</span>
-            <strong style="display:block;">${bannerTitle}</strong>
-            <small style="opacity:0.95;display:block;margin-top:2px;">${reason}${detailsText}</small>
-          </div>
-          <button onclick="this.closest('#ms365-warning-banner').remove(); document.body.style.marginTop = '0'; window.showingBanner = false;" title="Dismiss" style="
-            margin-left:auto;position:relative;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);
-            color:#fff;padding:0;border-radius:4px;cursor:pointer;
-            width:24px;height:24px;min-width:24px;min-height:24px;display:flex;align-items:center;justify-content:center;
-            font-size:14px;font-weight:bold;line-height:1;box-sizing:border-box;font-family:monospace;z-index:2;">×</button>
-        </div>`;
+      const renderBannerContent = (bannerElement) => {
+        if (!bannerElement) return;
+
+        const root = document.createElement("div");
+        root.style.position = "relative";
+        root.style.display = "flex";
+        root.style.alignItems = "center";
+        root.style.gap = "16px";
+        root.style.minHeight = "56px";
+        root.style.paddingRight = "40px";
+
+        const left = document.createElement("div");
+        left.id = "check-banner-left";
+        left.style.display = "flex";
+        left.style.alignItems = "center";
+        left.style.gap = "12px";
+        left.style.zIndex = "2";
+
+        const center = document.createElement("div");
+        center.style.position = "absolute";
+        center.style.left = "50%";
+        center.style.top = "50%";
+        center.style.transform = "translate(-50%,-50%)";
+        center.style.textAlign = "center";
+        center.style.maxWidth = "60%";
+        center.style.zIndex = "1";
+        center.style.pointerEvents = "none";
+
+        const icon = document.createElement("span");
+        icon.style.display = "block";
+        icon.style.fontSize = "24px";
+        icon.style.marginBottom = "4px";
+        icon.textContent = bannerIcon;
+
+        const title = document.createElement("strong");
+        title.style.display = "block";
+        title.textContent = bannerTitle;
+
+        const subtitle = document.createElement("small");
+        subtitle.style.opacity = "0.95";
+        subtitle.style.display = "block";
+        subtitle.style.marginTop = "2px";
+        subtitle.textContent = `${reason}${detailsText}`;
+
+        center.appendChild(icon);
+        center.appendChild(title);
+        center.appendChild(subtitle);
+
+        const dismissButton = document.createElement("button");
+        dismissButton.title = "Dismiss";
+        dismissButton.style.position = "absolute";
+        dismissButton.style.right = "16px";
+        dismissButton.style.top = "50%";
+        dismissButton.style.transform = "translateY(-50%)";
+        dismissButton.style.background = "rgba(255,255,255,0.2)";
+        dismissButton.style.border = "1px solid rgba(255,255,255,0.3)";
+        dismissButton.style.color = "#fff";
+        dismissButton.style.padding = "0";
+        dismissButton.style.borderRadius = "4px";
+        dismissButton.style.cursor = "pointer";
+        dismissButton.style.width = "24px";
+        dismissButton.style.height = "24px";
+        dismissButton.style.minWidth = "24px";
+        dismissButton.style.minHeight = "24px";
+        dismissButton.style.display = "flex";
+        dismissButton.style.alignItems = "center";
+        dismissButton.style.justifyContent = "center";
+        dismissButton.style.fontSize = "14px";
+        dismissButton.style.fontWeight = "bold";
+        dismissButton.style.lineHeight = "1";
+        dismissButton.style.boxSizing = "border-box";
+        dismissButton.style.fontFamily = "monospace";
+        dismissButton.style.zIndex = "3";
+        dismissButton.textContent = "×";
+        dismissButton.addEventListener("click", () => {
+          bannerElement.remove();
+          document.body.style.marginTop = "0";
+          showingBanner = false;
+        });
+
+        root.appendChild(left);
+        root.appendChild(center);
+        root.appendChild(dismissButton);
+        bannerElement.replaceChildren(root);
+      };
 
       // Check if banner already exists
       let banner = document.getElementById("ms365-warning-banner");
 
       if (banner) {
         // Update existing banner content and color
-        banner.innerHTML = bannerContent;
+        renderBannerContent(banner);
         banner.style.background = bannerColor;
         fetchBranding().then((branding) => applyBranding(banner, branding));
 
@@ -5861,7 +6333,7 @@ if (window.checkExtensionLoaded) {
       // CRITICAL: Register the banner BEFORE adding to DOM
       registerInjectedElement(banner);
 
-      banner.innerHTML = bannerContent;
+      renderBannerContent(banner);
       document.body.insertBefore(banner, document.body.firstChild);
 
       // Register all child elements created via innerHTML
@@ -5902,10 +6374,25 @@ if (window.checkExtensionLoaded) {
         validBadgeTimeoutId = null;
       }
 
-      // Load timeout configuration
+      // Load timeout configuration from background to get merged config
       const config = await new Promise((resolve) => {
-        chrome.storage.local.get(["config"], (result) => {
-          resolve(result.config || {});
+        chrome.runtime.sendMessage({ type: "GET_CONFIG" }, (response) => {
+          if (chrome.runtime.lastError) {
+            logger.log(
+              `[M365-Protection] Error getting config from background: ${chrome.runtime.lastError.message}`
+            );
+            // Fallback to local storage if background not available
+            chrome.storage.local.get(["config"], (result) => {
+              resolve(result.config || {});
+            });
+          } else if (!response || !response.success) {
+            // Fallback to local storage if response invalid
+            chrome.storage.local.get(["config"], (result) => {
+              resolve(result.config || {});
+            });
+          } else {
+            resolve(response.config);
+          }
         });
       });
 
@@ -6272,23 +6759,44 @@ if (window.checkExtensionLoaded) {
       const isCriticalThreat = severity === "critical" || severity === "high";
       const isRogueApp = reportData.type === "critical_rogue_app_detected";
       const isPhishingBlocked = reportData.type === "phishing_blocked";
+      const isBlockedDomainSquatting =
+        reportData.type === "domain_squatting_detected" &&
+        reportData.action === "blocked";
 
       // Allow critical/high threats and rogue apps, skip informational reports
-      if (!isCriticalThreat && !isRogueApp && !isPhishingBlocked) {
+      if (
+        !isCriticalThreat &&
+        !isRogueApp &&
+        !isPhishingBlocked &&
+        !isBlockedDomainSquatting
+      ) {
         logger.debug(
-          `CIPP reporting skipped for ${reportData.type} - only high/critical threats are reported`
+          `CIPP reporting skipped for ${reportData.type} - only high/critical threats or blocked domain squatting events are reported`
         );
         return;
       }
 
-      // Get CIPP configuration from storage
-      const result = await new Promise((resolve) => {
-        chrome.storage.local.get(["config"], (result) => {
-          resolve(result.config || {});
+      // Get CIPP configuration from background to get merged config
+      const config = await new Promise((resolve) => {
+        chrome.runtime.sendMessage({ type: "GET_CONFIG" }, (response) => {
+          if (chrome.runtime.lastError) {
+            logger.log(
+              `[M365-Protection] Error getting config from background: ${chrome.runtime.lastError.message}`
+            );
+            // Fallback to local storage if background not available
+            chrome.storage.local.get(["config"], (result) => {
+              resolve(result.config || {});
+            });
+          } else if (!response || !response.success) {
+            // Fallback to local storage if response invalid
+            chrome.storage.local.get(["config"], (result) => {
+              resolve(result.config || {});
+            });
+          } else {
+            resolve(response.config);
+          }
         });
       });
-
-      const config = result;
 
       // Check if CIPP reporting is enabled and URL is configured
       if (!config.enableCippReporting || !config.cippServerUrl) {
@@ -6348,10 +6856,25 @@ if (window.checkExtensionLoaded) {
    */
   async function applyBrandingColors() {
     try {
-      // Get branding configuration from storage
+      // Get branding configuration from background to get merged config
       const result = await new Promise((resolve) => {
-        chrome.storage.local.get(["brandingConfig"], (result) => {
-          resolve(result.brandingConfig || {});
+        chrome.runtime.sendMessage({ type: "GET_BRANDING_CONFIG" }, (response) => {
+          if (chrome.runtime.lastError) {
+            logger.log(
+              `[M365-Protection] Error getting branding from background: ${chrome.runtime.lastError.message}`
+            );
+            // Fallback to local storage if background not available
+            chrome.storage.local.get(["brandingConfig"], (result) => {
+              resolve(result?.brandingConfig || {});
+            });
+          } else if (!response || !response.success) {
+            // Fallback to local storage if response invalid
+            chrome.storage.local.get(["brandingConfig"], (result) => {
+              resolve(result?.brandingConfig || {});
+            });
+          } else {
+            resolve(response.branding || {});
+          }
         });
       });
 
@@ -6383,11 +6906,100 @@ if (window.checkExtensionLoaded) {
   }
 
   /**
+   * Track network activity for better timing detection
+   */
+  let pendingRequests = 0;
+  let networkIdleTimer = null;
+  let lastNetworkActivity = Date.now();
+
+  /**
+   * Monitor fetch/XHR to detect when network is idle
+   */
+  function setupNetworkMonitoring() {
+    // Intercept fetch
+    const originalFetch = window.fetch;
+    window.fetch = function(...args) {
+      pendingRequests++;
+      lastNetworkActivity = Date.now();
+      logger.debug(`🌐 Fetch request started (pending: ${pendingRequests})`);
+      
+      return originalFetch.apply(this, arguments).finally(() => {
+        pendingRequests--;
+        lastNetworkActivity = Date.now();
+        logger.debug(`🌐 Fetch request completed (pending: ${pendingRequests})`);
+        checkNetworkIdle();
+      });
+    };
+
+    // Intercept XMLHttpRequest
+    const originalOpen = XMLHttpRequest.prototype.open;
+    const originalSend = XMLHttpRequest.prototype.send;
+    
+    XMLHttpRequest.prototype.open = function(...args) {
+      this._check_tracked = true;
+      return originalOpen.apply(this, args);
+    };
+    
+    XMLHttpRequest.prototype.send = function(...args) {
+      if (this._check_tracked) {
+        pendingRequests++;
+        lastNetworkActivity = Date.now();
+        logger.debug(`🌐 XHR request started (pending: ${pendingRequests})`);
+        
+        this.addEventListener('loadend', () => {
+          pendingRequests--;
+          lastNetworkActivity = Date.now();
+          logger.debug(`🌐 XHR request completed (pending: ${pendingRequests})`);
+          checkNetworkIdle();
+        });
+      }
+      return originalSend.apply(this, args);
+    };
+  }
+
+  /**
+   * Check if network has been idle for a period
+   */
+  function checkNetworkIdle() {
+    if (networkIdleTimer) {
+      clearTimeout(networkIdleTimer);
+    }
+    
+    // Wait 300ms after last network activity before considering network "idle"
+    networkIdleTimer = setTimeout(() => {
+      if (pendingRequests === 0) {
+        const timeSinceActivity = Date.now() - lastNetworkActivity;
+        if (timeSinceActivity >= 300) {
+          logger.log("🌐 Network idle detected - content likely loaded");
+          // Trigger a scan if we haven't scanned recently
+          if (scanCount < MAX_SCANS && !showingBanner && !escalatedToBlock) {
+            logger.log("🔄 Triggering scan after network idle");
+            runProtection(true);
+          }
+        }
+      }
+    }, 300);
+  }
+
+  /**
+   * Check if critical elements exist (forms, inputs, etc.)
+   */
+  function hasCriticalElements() {
+    const hasForm = document.querySelector('form') !== null;
+    const hasPasswordInput = document.querySelector('input[type="password"]') !== null;
+    const hasEmailInput = document.querySelector('input[type="email"]') !== null;
+    const hasTextInput = document.querySelectorAll('input[type="text"]').length > 0;
+    
+    return hasForm || hasPasswordInput || hasEmailInput || hasTextInput;
+  }
+
+  /**
    * Initialize protection when DOM is ready
    */
   function initializeProtection() {
     try {
       logger.log("Initializing Check");
+      logger.log(`Initial document.readyState: ${document.readyState}`);
 
       // Console capture is now setup only when developer mode is enabled (see loadDeveloperConsoleLoggingSetting)
       // This eliminates performance overhead for normal users
@@ -6397,15 +7009,121 @@ if (window.checkExtensionLoaded) {
 
       // Setup dynamic script monitoring early to catch any immediate script execution
       setupDynamicScriptMonitoring();
+      
+      // Setup network monitoring for better timing detection
+      setupNetworkMonitoring();
 
+      // Track when we've completed different loading stages
+      let domContentLoadedFired = false;
+      let windowLoadFired = false;
+      let initialScanDone = false;
+
+      /**
+       * Perform initial scan with smart timing
+       */
+      function performInitialScan() {
+        if (initialScanDone) {
+          logger.debug("Initial scan already completed, skipping");
+          return;
+        }
+        
+        initialScanDone = true;
+        logger.log("📊 Performing initial scan");
+        logger.log(`  - DOMContentLoaded: ${domContentLoadedFired}`);
+        logger.log(`  - window.load: ${windowLoadFired}`);
+        logger.log(`  - Pending requests: ${pendingRequests}`);
+        logger.log(`  - Critical elements: ${hasCriticalElements()}`);
+        
+        runProtection();
+      }
+
+      // Strategy 1: Wait for DOMContentLoaded if still loading
       if (document.readyState === "loading") {
+        logger.log("⏳ Document still loading, waiting for DOMContentLoaded");
+        
         document.addEventListener("DOMContentLoaded", () => {
-          setTimeout(runProtection, 100); // Small delay to ensure DOM is stable
+          domContentLoadedFired = true;
+          logger.log("✅ DOMContentLoaded fired");
+          
+          // Check if critical elements already exist
+          if (hasCriticalElements()) {
+            logger.log("🎯 Critical elements detected immediately after DOMContentLoaded");
+            // Scan quickly if we have forms/inputs
+            setTimeout(performInitialScan, 200);
+          } else {
+            // Wait a bit longer for dynamic content
+            setTimeout(performInitialScan, 600);
+          }
         });
       } else {
-        // DOM already ready
-        setTimeout(runProtection, 100);
+        // DOM already loaded
+        domContentLoadedFired = true;
+        logger.log("✅ Document already loaded (readyState: " + document.readyState + ")");
+        
+        if (hasCriticalElements()) {
+          logger.log("🎯 Critical elements already present");
+          // Scan quickly if we have forms/inputs
+          setTimeout(performInitialScan, 200);
+        } else {
+          // Wait longer for dynamic content to load
+          setTimeout(performInitialScan, 800);
+        }
       }
+
+      // Strategy 2: Also wait for window.load event (all resources loaded)
+      if (document.readyState !== "complete") {
+        window.addEventListener("load", () => {
+          windowLoadFired = true;
+          logger.log("✅ Window load event fired (all resources loaded)");
+          
+          // Trigger another scan if initial scan was too early
+          if (initialScanDone && !hasCriticalElements() && scanCount < MAX_SCANS) {
+            logger.log("🔄 Re-scanning after window.load as critical elements may have loaded");
+            setTimeout(() => runProtection(true), 300);
+          }
+        });
+      } else {
+        windowLoadFired = true;
+        logger.log("✅ Window already fully loaded");
+      }
+
+      // Strategy 3: Monitor for critical elements appearing
+      // If we scan early and find nothing, watch for forms/inputs to appear
+      const criticalElementObserver = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          if (mutation.type === "childList") {
+            for (const node of mutation.addedNodes) {
+              if (node.nodeType === Node.ELEMENT_NODE) {
+                const tagName = node.tagName?.toLowerCase();
+                // If a form or input appears, trigger immediate scan
+                if (tagName === "form" || tagName === "input") {
+                  logger.log("🎯 Critical element detected via observer: " + tagName);
+                  criticalElementObserver.disconnect();
+                  
+                  if (scanCount < MAX_SCANS && !showingBanner && !escalatedToBlock) {
+                    logger.log("🔄 Triggering immediate scan");
+                    runProtection(true);
+                  }
+                  return;
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // Start observing for critical elements
+      criticalElementObserver.observe(document.documentElement, {
+        childList: true,
+        subtree: true,
+      });
+
+      // Stop observing after 5 seconds
+      setTimeout(() => {
+        criticalElementObserver.disconnect();
+        logger.debug("Critical element observer stopped");
+      }, 5000);
+
     } catch (error) {
       logger.error("Failed to initialize protection:", error.message);
     }

@@ -11,6 +11,7 @@ import { ConfigManager } from "./modules/config-manager.js";
 import { PolicyManager } from "./modules/policy-manager.js";
 import { DetectionRulesManager } from "./modules/detection-rules-manager.js";
 import { WebhookManager } from "./modules/webhook-manager.js";
+import { DomainSquattingDetector } from "./modules/domain-squatting-detector.js";
 import logger from "./utils/logger.js";
 import { store as storeLog } from "./utils/background-logger.js";
 
@@ -288,8 +289,9 @@ class CheckBackground {
   constructor() {
     this.configManager = new ConfigManager();
     this.policyManager = new PolicyManager();
-    this.detectionRulesManager = new DetectionRulesManager();
+    this.detectionRulesManager = new DetectionRulesManager(this.configManager);
     this.rogueAppsManager = new RogueAppsManager();
+    this.domainSquattingDetector = new DomainSquattingDetector();
     this.webhookManager = new WebhookManager(this.configManager);
     this.isInitialized = false;
     this.initializationPromise = null;
@@ -398,6 +400,17 @@ class CheckBackground {
 
       // Initialize detection rules manager
       await this.detectionRulesManager.initialize();
+      
+      // Initialize domain squatting detector with rules and URL allowlist
+      const detectionRules = this.detectionRulesManager.cachedRules;
+      if (detectionRules) {
+        const runtimeConfig = await this.configManager.getConfig();
+        await this.domainSquattingDetector.initialize(
+          detectionRules,
+          runtimeConfig
+        );
+        logger.log("Domain squatting detector initialized");
+      }
 
       await this.refreshPolicy();
 
@@ -1411,11 +1424,58 @@ class CheckBackground {
               rules,
               message: "Detection rules updated",
             });
+            
+            // Also update domain squatting detector with new rules and URL allowlist
+            const updatedRules = await this.detectionRulesManager.getDetectionRules();
+            if (updatedRules && this.domainSquattingDetector) {
+              const runtimeConfig = await this.configManager.getConfig();
+              await this.domainSquattingDetector.initialize(
+                updatedRules,
+                runtimeConfig
+              );
+              logger.log("Domain squatting detector updated with new rules");
+            }
           } catch (error) {
             logger.error(
               "Check: Failed to force update detection rules:",
               error
             );
+            sendResponse({ success: false, error: error.message });
+          }
+          break;
+        
+        case "check_domain_squatting":
+          try {
+            const { domain } = message;
+            if (!domain) {
+              sendResponse({ success: false, error: "Domain parameter required" });
+              break;
+            }
+            
+            const result = this.domainSquattingDetector.checkDomain(domain);
+            sendResponse({ success: true, result });
+          } catch (error) {
+            logger.error("Check: Failed to check domain squatting:", error);
+            sendResponse({ success: false, error: error.message });
+          }
+          break;
+
+        case "REDIRECT_TO_BLOCKED_PAGE":
+          try {
+            if (!sender.tab?.id) {
+              sendResponse({ success: false, error: "No tab ID available" });
+              break;
+            }
+
+            if (!message.url) {
+              sendResponse({ success: false, error: "No redirect URL provided" });
+              break;
+            }
+
+            await chrome.tabs.update(sender.tab.id, { url: message.url });
+            sendResponse({ success: true });
+          } catch (error) {
+            logger.error("Check: Failed to redirect tab to blocked page:", error);
             sendResponse({ success: false, error: error.message });
           }
           break;
@@ -1439,6 +1499,17 @@ class CheckBackground {
             const newBadgeEnabled =
               updatedConfig?.enableValidPageBadge ||
               this.policy?.EnableValidPageBadge;
+
+            // Update domain squatting detector with new configuration
+            // If URL allowlist changed, reinitialize detector to extract new domains
+            if (this.domainSquattingDetector) {
+              const detectionRules = this.detectionRulesManager.cachedRules || {};
+              await this.domainSquattingDetector.initialize(
+                detectionRules,
+                updatedConfig
+              );
+              logger.log("Domain squatting detector configuration updated");
+            }
 
             // If badge was disabled, remove badges from all tabs
             if (previousBadgeEnabled && !newBadgeEnabled) {
@@ -1798,8 +1869,9 @@ class CheckBackground {
         enhancedEvent.threatDetected = true;
         break;
       case "threat_detected":
-        enhancedEvent.action = event.action || "blocked";
-        enhancedEvent.threatLevel = event.threatLevel || "high";
+        enhancedEvent.action = event.action || "warned";
+        enhancedEvent.threatLevel =
+          event.threatLevel || event.severity || "medium";
         enhancedEvent.threatDetected = true;
         break;
       case "form_submission":

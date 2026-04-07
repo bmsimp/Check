@@ -122,6 +122,36 @@
       </elements>
     </policy>
 
+    <!-- Generic Webhook Enabled -->
+    <policy name="CheckGenericWebhookEnabled" class="Machine" displayName="$(string.CheckGenericWebhookEnabled)" explainText="$(string.CheckGenericWebhookEnabled_Explain)" key="SOFTWARE\Policies\Microsoft\Edge\3rdparty\extensions\knepjpocdagponkonnbggpcnhnaikajg\policy\genericWebhook" valueName="enabled">
+      <parentCategory ref="CheckExtensionEdge" />
+      <supportedOn ref="SUPPORTED_WIN7" />
+      <enabledValue>
+        <decimal value="1" />
+      </enabledValue>
+      <disabledValue>
+        <decimal value="0" />
+      </disabledValue>
+    </policy>
+
+    <!-- Generic Webhook URL -->
+    <policy name="CheckGenericWebhookUrl" class="Machine" displayName="$(string.CheckGenericWebhookUrl)" explainText="$(string.CheckGenericWebhookUrl_Explain)" key="SOFTWARE\Policies\Microsoft\Edge\3rdparty\extensions\knepjpocdagponkonnbggpcnhnaikajg\policy\genericWebhook" presentation="$(presentation.CheckGenericWebhookUrl)">
+      <parentCategory ref="CheckExtensionEdge" />
+      <supportedOn ref="SUPPORTED_WIN7" />
+      <elements>
+        <text id="GenericWebhookUrl" valueName="url" />
+      </elements>
+    </policy>
+
+    <!-- Generic Webhook Events -->
+    <policy name="CheckGenericWebhookEvents" class="Machine" displayName="$(string.CheckGenericWebhookEvents)" explainText="$(string.CheckGenericWebhookEvents_Explain)" key="SOFTWARE\Policies\Microsoft\Edge\3rdparty\extensions\knepjpocdagponkonnbggpcnhnaikajg\policy\genericWebhook\events" presentation="$(presentation.CheckGenericWebhookEvents)">
+      <parentCategory ref="CheckExtensionEdge" />
+      <supportedOn ref="SUPPORTED_WIN7" />
+      <elements>
+        <list id="GenericWebhookEventsList" valueName="events" valuePrefix="" />
+      </elements>
+    </policy>
+
     <!-- Custom Rules URL -->
     <policy name="CheckCustomRulesUrl" class="Machine" displayName="$(string.CheckCustomRulesUrl)" explainText="$(string.CheckCustomRulesUrl_Explain)" key="SOFTWARE\Policies\Microsoft\Edge\3rdparty\extensions\knepjpocdagponkonnbggpcnhnaikajg\policy" presentation="$(presentation.CheckCustomRulesUrl)">
       <parentCategory ref="CheckExtensionEdge" />
@@ -176,6 +206,33 @@
       </elements>
     </policy>
 
+    <!-- Support URL -->
+    <policy name="CheckSupportUrl" class="Machine" displayName="$(string.CheckSupportUrl)" explainText="$(string.CheckSupportUrl_Explain)" key="SOFTWARE\Policies\Microsoft\Edge\3rdparty\extensions\knepjpocdagponkonnbggpcnhnaikajg\policy\customBranding" presentation="$(presentation.CheckSupportUrl)">
+      <parentCategory ref="CheckExtensionEdge" />
+      <supportedOn ref="SUPPORTED_WIN7" />
+      <elements>
+        <text id="SupportUrl" valueName="supportUrl" />
+      </elements>
+    </policy>
+
+    <!-- Privacy URL -->
+    <policy name="CheckPrivacyPolicyUrl" class="Machine" displayName="$(string.CheckPrivacyPolicyUrl)" explainText="$(string.CheckPrivacyPolicyUrl_Explain)" key="SOFTWARE\Policies\Microsoft\Edge\3rdparty\extensions\knepjpocdagponkonnbggpcnhnaikajg\policy\customBranding" presentation="$(presentation.CheckPrivacyPolicyUrl)">
+      <parentCategory ref="CheckExtensionEdge" />
+      <supportedOn ref="SUPPORTED_WIN7" />
+      <elements>
+        <text id="PrivacyPolicyUrl" valueName="privacyPolicyUrl" />
+      </elements>
+    </policy>
+
+    <!-- About URL -->
+    <policy name="CheckAboutUrl" class="Machine" displayName="$(string.CheckAboutUrl)" explainText="$(string.CheckAboutUrl_Explain)" key="SOFTWARE\Policies\Microsoft\Edge\3rdparty\extensions\knepjpocdagponkonnbggpcnhnaikajg\policy\customBranding" presentation="$(presentation.CheckAboutUrl)">
+      <parentCategory ref="CheckExtensionEdge" />
+      <supportedOn ref="SUPPORTED_WIN7" />
+      <elements>
+        <text id="AboutUrl" valueName="aboutUrl" />
+      </elements>
+    </policy>
+
     <!-- Primary Color -->
     <policy name="CheckPrimaryColor" class="Machine" displayName="$(string.CheckPrimaryColor)" explainText="$(string.CheckPrimaryColor_Explain)" key="SOFTWARE\Policies\Microsoft\Edge\3rdparty\extensions\knepjpocdagponkonnbggpcnhnaikajg\policy\customBranding" presentation="$(presentation.CheckPrimaryColor)">
       <parentCategory ref="CheckExtensionEdge" />
@@ -196,6 +253,18 @@
 
     <!-- Enable Debug Logging -->
     <policy name="CheckDebugLogging" class="Machine" displayName="$(string.CheckDebugLogging)" explainText="$(string.CheckDebugLogging_Explain)" key="SOFTWARE\Policies\Microsoft\Edge\3rdparty\extensions\knepjpocdagponkonnbggpcnhnaikajg\policy" valueName="enableDebugLogging">
+      <parentCategory ref="CheckExtensionEdge" />
+      <supportedOn ref="SUPPORTED_WIN7" />
+      <enabledValue>
+        <decimal value="1" />
+      </enabledValue>
+      <disabledValue>
+        <decimal value="0" />
+      </disabledValue>
+    </policy>
+
+    <!-- Enable Domain Squatting Detection -->
+    <policy name="CheckDomainSquattingEnabled" class="Machine" displayName="$(string.CheckDomainSquattingEnabled)" explainText="$(string.CheckDomainSquattingEnabled_Explain)" key="SOFTWARE\Policies\Microsoft\Edge\3rdparty\extensions\knepjpocdagponkonnbggpcnhnaikajg\policy\domainSquatting" valueName="enabled">
       <parentCategory ref="CheckExtensionEdge" />
       <supportedOn ref="SUPPORTED_WIN7" />
       <enabledValue>
@@ -306,6 +375,36 @@
       </elements>
     </policy>
 
+    <!-- Generic Webhook Enabled - Chrome -->
+    <policy name="CheckGenericWebhookEnabledChrome" class="Machine" displayName="$(string.CheckGenericWebhookEnabledChrome)" explainText="$(string.CheckGenericWebhookEnabledChrome_Explain)" key="SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\benimdeioplgkhanklclahllklceahbe\policy\genericWebhook" valueName="enabled">
+      <parentCategory ref="CheckExtensionChrome" />
+      <supportedOn ref="SUPPORTED_WIN7" />
+      <enabledValue>
+        <decimal value="1" />
+      </enabledValue>
+      <disabledValue>
+        <decimal value="0" />
+      </disabledValue>
+    </policy>
+
+    <!-- Generic Webhook URL - Chrome -->
+    <policy name="CheckGenericWebhookUrlChrome" class="Machine" displayName="$(string.CheckGenericWebhookUrlChrome)" explainText="$(string.CheckGenericWebhookUrlChrome_Explain)" key="SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\benimdeioplgkhanklclahllklceahbe\policy\genericWebhook" presentation="$(presentation.CheckGenericWebhookUrlChrome)">
+      <parentCategory ref="CheckExtensionChrome" />
+      <supportedOn ref="SUPPORTED_WIN7" />
+      <elements>
+        <text id="GenericWebhookUrlChrome" valueName="url" />
+      </elements>
+    </policy>
+
+    <!-- Generic Webhook Events - Chrome -->
+    <policy name="CheckGenericWebhookEventsChrome" class="Machine" displayName="$(string.CheckGenericWebhookEventsChrome)" explainText="$(string.CheckGenericWebhookEventsChrome_Explain)" key="SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\benimdeioplgkhanklclahllklceahbe\policy\genericWebhook\events" presentation="$(presentation.CheckGenericWebhookEventsChrome)">
+      <parentCategory ref="CheckExtensionChrome" />
+      <supportedOn ref="SUPPORTED_WIN7" />
+      <elements>
+        <list id="GenericWebhookEventsListChrome" valueName="events" valuePrefix="" />
+      </elements>
+    </policy>
+
     <!-- Custom Rules URL - Chrome -->
     <policy name="CheckCustomRulesUrlChrome" class="Machine" displayName="$(string.CheckCustomRulesUrlChrome)" explainText="$(string.CheckCustomRulesUrlChrome_Explain)" key="SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\benimdeioplgkhanklclahllklceahbe\policy" presentation="$(presentation.CheckCustomRulesUrlChrome)">
       <parentCategory ref="CheckExtensionChrome" />
@@ -360,6 +459,33 @@
       </elements>
     </policy>
 
+    <!-- Support URL - Chrome -->
+    <policy name="CheckSupportUrlChrome" class="Machine" displayName="$(string.CheckSupportUrlChrome)" explainText="$(string.CheckSupportUrlChrome_Explain)" key="SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\benimdeioplgkhanklclahllklceahbe\policy\customBranding" presentation="$(presentation.CheckSupportUrlChrome)">
+      <parentCategory ref="CheckExtensionChrome" />
+      <supportedOn ref="SUPPORTED_WIN7" />
+      <elements>
+        <text id="SupportUrlChrome" valueName="supportUrl" />
+      </elements>
+    </policy>
+
+    <!-- Privacy URL - Chrome -->
+    <policy name="CheckPrivacyPolicyUrlChrome" class="Machine" displayName="$(string.CheckPrivacyPolicyUrlChrome)" explainText="$(string.CheckPrivacyPolicyUrlChrome_Explain)" key="SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\benimdeioplgkhanklclahllklceahbe\policy\customBranding" presentation="$(presentation.CheckPrivacyPolicyUrlChrome)">
+      <parentCategory ref="CheckExtensionChrome" />
+      <supportedOn ref="SUPPORTED_WIN7" />
+      <elements>
+        <text id="PrivacyPolicyUrlChrome" valueName="privacyPolicyUrl" />
+      </elements>
+    </policy>
+
+    <!-- About URL - Chrome -->
+    <policy name="CheckAboutUrlChrome" class="Machine" displayName="$(string.CheckAboutUrlChrome)" explainText="$(string.CheckAboutUrlChrome_Explain)" key="SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\benimdeioplgkhanklclahllklceahbe\policy\customBranding" presentation="$(presentation.CheckAboutUrlChrome)">
+      <parentCategory ref="CheckExtensionChrome" />
+      <supportedOn ref="SUPPORTED_WIN7" />
+      <elements>
+        <text id="AboutUrlChrome" valueName="aboutUrl" />
+      </elements>
+    </policy>
+
     <!-- Primary Color - Chrome -->
     <policy name="CheckPrimaryColorChrome" class="Machine" displayName="$(string.CheckPrimaryColorChrome)" explainText="$(string.CheckPrimaryColorChrome_Explain)" key="SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\benimdeioplgkhanklclahllklceahbe\policy\customBranding" presentation="$(presentation.CheckPrimaryColorChrome)">
       <parentCategory ref="CheckExtensionChrome" />
@@ -380,6 +506,18 @@
 
     <!-- Enable Debug Logging - Chrome -->
     <policy name="CheckDebugLoggingChrome" class="Machine" displayName="$(string.CheckDebugLoggingChrome)" explainText="$(string.CheckDebugLoggingChrome_Explain)" key="SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\benimdeioplgkhanklclahllklceahbe\policy" valueName="enableDebugLogging">
+      <parentCategory ref="CheckExtensionChrome" />
+      <supportedOn ref="SUPPORTED_WIN7" />
+      <enabledValue>
+        <decimal value="1" />
+      </enabledValue>
+      <disabledValue>
+        <decimal value="0" />
+      </disabledValue>
+    </policy>
+
+    <!-- Enable Domain Squatting Detection - Chrome -->
+    <policy name="CheckDomainSquattingEnabledChrome" class="Machine" displayName="$(string.CheckDomainSquattingEnabledChrome)" explainText="$(string.CheckDomainSquattingEnabledChrome_Explain)" key="SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\benimdeioplgkhanklclahllklceahbe\policy\domainSquatting" valueName="enabled">
       <parentCategory ref="CheckExtensionChrome" />
       <supportedOn ref="SUPPORTED_WIN7" />
       <enabledValue>

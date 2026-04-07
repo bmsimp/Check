@@ -23,14 +23,23 @@ $testConfig = @{
   enableDebugLogging = 1
 }
 
+$testDomainSquatting = @{
+  enabled = 1
+}
+
 # Custom branding test values
 $testBranding = @{
   companyName = "Test Company"
-  companyURL = "https://example.com"
   productName = "Test Product"
   supportEmail = "test@example.com"
   primaryColor = "#FF6B00"
   logoUrl = ""
+}
+
+$testGenericWebhook = @{
+  enabled = 0
+  url = ""
+  events = @("detection_alert", "page_blocked")
 }
 
 function Set-TestPolicies {
@@ -46,6 +55,12 @@ function Set-TestPolicies {
     $type = if ($value -is [int]) { "DWord" } else { "String" }
     New-ItemProperty -Path $PolicyKey -Name $key -PropertyType $type -Value $value -Force | Out-Null
   }
+
+  $domainSquattingKey = "$PolicyKey\domainSquatting"
+  if (!(Test-Path $domainSquattingKey)) {
+    New-Item -Path $domainSquattingKey -Force | Out-Null
+  }
+  New-ItemProperty -Path $domainSquattingKey -Name "enabled" -PropertyType DWord -Value $testDomainSquatting.enabled -Force | Out-Null
   
   $brandingKey = "$PolicyKey\customBranding"
   if (!(Test-Path $brandingKey)) {
@@ -54,6 +69,22 @@ function Set-TestPolicies {
   
   foreach ($key in $testBranding.Keys) {
     New-ItemProperty -Path $brandingKey -Name $key -PropertyType String -Value $testBranding[$key] -Force | Out-Null
+  }
+
+  $genericWebhookKey = "$PolicyKey\genericWebhook"
+  if (!(Test-Path $genericWebhookKey)) {
+    New-Item -Path $genericWebhookKey -Force | Out-Null
+  }
+  New-ItemProperty -Path $genericWebhookKey -Name "enabled" -PropertyType DWord -Value $testGenericWebhook.enabled -Force | Out-Null
+  New-ItemProperty -Path $genericWebhookKey -Name "url" -PropertyType String -Value $testGenericWebhook.url -Force | Out-Null
+
+  $webhookEventsKey = "$genericWebhookKey\events"
+  if (!(Test-Path $webhookEventsKey)) {
+    New-Item -Path $webhookEventsKey -Force | Out-Null
+  }
+  Remove-ItemProperty -Path $webhookEventsKey -Name * -Force -ErrorAction SilentlyContinue | Out-Null
+  for ($i = 0; $i -lt $testGenericWebhook.events.Count; $i++) {
+    New-ItemProperty -Path $webhookEventsKey -Name ($i + 1) -PropertyType String -Value $testGenericWebhook.events[$i] -Force | Out-Null
   }
   
   Write-Output "Applied test policies to: $PolicyKey"
@@ -70,6 +101,18 @@ function Show-CurrentPolicies {
     if (Test-Path $brandingKey) {
       Write-Output "`nCustom Branding:"
       Get-ItemProperty -Path $brandingKey | Format-List
+    }
+
+    $genericWebhookKey = "$PolicyKey\genericWebhook"
+    if (Test-Path $genericWebhookKey) {
+      Write-Output "`nGeneric Webhook:"
+      Get-ItemProperty -Path $genericWebhookKey | Format-List
+    }
+
+    $domainSquattingKey = "$PolicyKey\domainSquatting"
+    if (Test-Path $domainSquattingKey) {
+      Write-Output "`nDomain Squatting:"
+      Get-ItemProperty -Path $domainSquattingKey | Format-List
     }
   } else {
     Write-Output "No policies set at: $PolicyKey"

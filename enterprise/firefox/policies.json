@@ -28,12 +28,17 @@
           "customRulesUrl": "https://raw.githubusercontent.com/CyberDrain/Check/refs/heads/main/rules/detection-rules.json",
           "updateInterval": 24,
           "urlAllowlist": [],
+          "domainSquatting": {
+            "enabled": true
+          },
           "enableDebugLogging": false,
           "customBranding": {
             "companyName": "",
-            "companyURL": "https://cyberdrain.com/",
             "productName": "",
             "supportEmail": "",
+            "supportUrl": "",
+            "privacyPolicyUrl": "",
+            "aboutUrl": "",
             "primaryColor": "#F77F00",
             "logoUrl": ""
           },

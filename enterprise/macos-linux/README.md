@@ -158,9 +158,15 @@ All settings are based on the managed schema and include:
 - **`cippServerUrl`** - CIPP server URL for reporting
 - **`cippTenantId`** - Tenant identifier for multi-tenant environments
 
+### Generic Webhook Integration
+- **`genericWebhook.enabled`** - Enable sending events to custom webhook endpoint
+- **`genericWebhook.url`** - Webhook endpoint URL
+- **`genericWebhook.events`** - Event types to send (`detection_alert`, `false_positive_report`, `page_blocked`, `rogue_app_detected`, `threat_detected`, `validation_event`)
+
 ### Rule Management
 - **`customRulesUrl`** - URL for custom detection rules
 - **`updateInterval`** - Rule update interval in hours (default: 24)
+- **`domainSquatting.enabled`** - Enable/disable domain squatting detection (default: true)
 
 ### Custom Branding
 - **`companyName`** - Company name for white labeling
@@ -260,10 +266,11 @@ ls -la /etc/microsoft-edge/policies/managed/
 
 Before deployment, edit the JSON files to customize:
 1. **CIPP Integration** - Set `cippServerUrl` and `cippTenantId`
-2. **Custom Rules** - Set `customRulesUrl` to your rules endpoint
-3. **Branding** - Configure company name, colors, and logo URL
-4. **Security Settings** - Adjust notification and blocking preferences
-5. **Debug Mode** - Enable `enableDebugLogging` for troubleshooting
+2. **Webhook Integration** - Configure `genericWebhook.enabled`, `genericWebhook.url`, and `genericWebhook.events`
+3. **Custom Rules** - Set `customRulesUrl` to your rules endpoint
+4. **Branding** - Configure company name, colors, and logo URL
+5. **Security Settings** - Adjust notification and blocking preferences
+6. **Debug Mode** - Enable `enableDebugLogging` for troubleshooting
 
 ## Security Considerations
 

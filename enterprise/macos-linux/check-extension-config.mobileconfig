@@ -46,6 +46,18 @@
                     <key>Value</key>
                     <string />
                 </dict>
+                <key>genericWebhook</key>
+                <dict>
+                    <key>Value</key>
+                    <dict>
+                        <key>enabled</key>
+                        <false />
+                        <key>url</key>
+                        <string />
+                        <key>events</key>
+                        <array />
+                    </dict>
+                </dict>
                 <key>customRulesUrl</key>
                 <dict>
                     <key>Value</key>
@@ -55,6 +67,14 @@
                 <dict>
                     <key>Value</key>
                     <integer>24</integer>
+                </dict>
+                <key>domainSquatting</key>
+                <dict>
+                    <key>Value</key>
+                    <dict>
+                        <key>enabled</key>
+                        <true />
+                    </dict>
                 </dict>
                 <!-- Logging Settings -->
                 <key>enableDebugLogging</key>

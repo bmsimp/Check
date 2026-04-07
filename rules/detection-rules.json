@@ -1,5 +1,5 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "lastUpdated": "2025-12-20T00:00:00Z",
   "description": "Phishing detection logic for identifying phishing attempts targeting Microsoft 365 login pages",
   "trusted_login_patterns": [
@@ -33,7 +33,11 @@
     "^https:\\/\\/([a-zA-Z0-9-]+\\.)*microsoftazuread-sso\\.com$",
     "^https:\\/\\/([a-zA-Z0-9-]+\\.)*azureedge\\.net$",
     "^https:\\/\\/([a-zA-Z0-9-]+\\.)*bing\\.com$",
+    "^https:\\/\\/([a-zA-Z0-9-]+\\.)*msn\\.com$",
+    "^https:\\/\\/([a-zA-Z0-9-]+\\.)*xbox\\.com$",
+    "^https:\\/\\/([a-zA-Z0-9-]+\\.)*mcas\\.ms$",
     "^https:\\/\\/github\\.com$",
+    "^https:\\/\\/raw\\.githubusercontent\\.com$",
     "^https:\\/\\/([a-zA-Z0-9-]+\\.)*cloud\\.microsoft$",
     "^https:\\/\\/([a-zA-Z0-9-]+\\.)*powerbi\\.com$"
   ],
@@ -178,11 +182,7 @@
         "id": "meta_og_title_microsoft",
         "type": "meta_tag",
         "attribute": "og:title",
-        "patterns": [
-          "microsoft",
-          "office\\s*365",
-          "azure"
-        ],
+        "patterns": ["microsoft", "office\\s*365", "azure"],
         "description": "Open Graph title contains Microsoft branding",
         "weight": 0.5,
         "category": "secondary"
@@ -221,19 +221,73 @@
       },
       {
         "id": "segoe_ui_font",
-        "type": "source_content",
-        "pattern": "Segoe\\s+UI(?:\\s+(?:Webfont|Symbol|Historic|Emoji))?",
+        "type": "code_driven",
+        "code_logic": {
+          "type": "all_of",
+          "operations": [
+            {
+              "type": "substring_present",
+              "values": ["segoe ui"]
+            },
+            {
+              "type": "any_of",
+              "operations": [
+                {
+                  "type": "substring_present",
+                  "values": [
+                    "loginfmt",
+                    "idsibutton9",
+                    "idpartnerpl",
+                    "urlmsasignup",
+                    "aadcdn.msauth.net",
+                    "aadcdn.msftauthimages.net"
+                  ]
+                },
+                {
+                  "type": "substring_present",
+                  "values": ["type=\"password\"", "signin", "sign in", "login"]
+                }
+              ]
+            }
+          ]
+        },
         "description": "Microsoft's Segoe UI font family variants (supporting evidence only)",
         "weight": 0.5,
         "category": "secondary"
       },
       {
         "id": "ms_container_layout",
-        "type": "css_pattern",
-        "patterns": [
-          "display:\\s*grid.*place-items:\\s*center",
-          "height:\\s*100vh.*width:\\s*100vw"
-        ],
+        "type": "code_driven",
+        "code_logic": {
+          "type": "any_of",
+          "operations": [
+            {
+              "type": "pattern_count",
+              "patterns": [
+                "display:\\s*grid[^;{}]*;[^{}]*place-items:\\s*center"
+              ],
+              "flags": "i",
+              "min_count": 1
+            },
+            {
+              "type": "all_of",
+              "operations": [
+                {
+                  "type": "pattern_count",
+                  "patterns": ["(?:^|[^-\\w])height\\s*:\\s*100vh\\s*;"],
+                  "flags": "i",
+                  "min_count": 1
+                },
+                {
+                  "type": "pattern_count",
+                  "patterns": ["(?:^|[^-\\w])width\\s*:\\s*100vw\\s*;"],
+                  "flags": "i",
+                  "min_count": 1
+                }
+              ]
+            }
+          ]
+        },
         "description": "Microsoft login container layout (supporting evidence only)",
         "weight": 0.5,
         "category": "secondary"
@@ -241,7 +295,7 @@
       {
         "id": "ms_external_css",
         "type": "source_content",
-        "pattern": "(?:href=[\"'].*(?:aadcdn\\.msauth|aadcdn\\.msftauth|login\\.microsoftonline).*\\.css[\"']|src=[\"'].*(?:aadcdn\\.msauth|login\\.microsoft).*\\.css[\"'])",
+        "pattern": "(?:<(?:link|script)[^>]+(?:href|src)=[\"']https?:\\/\\/[^\"']*(?:aadcdn\\.msauth\\.net|aadcdn\\.msftauth\\.net|aadcdn\\.msftauthimages\\.net|login\\.microsoftonline\\.com)[^\"']*\\.css(?:\\?[^\"']*)?[\"'][^>]*>)",
         "description": "Microsoft login-specific CSS files (strong evidence)",
         "weight": 3,
         "category": "secondary"
@@ -343,26 +397,19 @@
   "aad_detection_elements": [
     {
       "id": "loginfmt_field",
-      "selectors": [
-        "input[name='loginfmt']",
-        "#i0116"
-      ],
+      "selectors": ["input[name='loginfmt']", "#i0116"],
       "description": "Azure AD username/email input field",
       "weight": 30
     },
     {
       "id": "next_button",
-      "selectors": [
-        "#idSIButton9"
-      ],
+      "selectors": ["#idSIButton9"],
       "description": "Azure AD Next/Sign in button",
       "weight": 25
     },
     {
       "id": "password_field",
-      "selectors": [
-        "input[type='password']"
-      ],
+      "selectors": ["input[type='password']"],
       "description": "Password input field",
       "weight": 20
     },
@@ -392,25 +439,19 @@
     },
     {
       "id": "urlMsaSignUp",
-      "text_patterns": [
-        "urlMsaSignUp"
-      ],
+      "text_patterns": ["urlMsaSignUp"],
       "description": "Microsoft signup URL reference",
       "weight": 15
     },
     {
       "id": "flowToken",
-      "text_patterns": [
-        "flowToken"
-      ],
+      "text_patterns": ["flowToken"],
       "description": "Microsoft authentication flow token",
       "weight": 15
     },
     {
       "id": "aadcdn_msauth",
-      "text_patterns": [
-        "https:\\/\\/aadcdn\\.msauth\\.net/"
-      ],
+      "text_patterns": ["https:\\/\\/aadcdn\\.msauth\\.net/"],
       "description": "Microsoft authentication CDN reference",
       "weight": 15
     }
@@ -421,9 +462,7 @@
       "type": "url",
       "weight": 25,
       "condition": {
-        "domains": [
-          "login.microsoftonline.com"
-        ]
+        "domains": ["login.microsoftonline.com"]
       },
       "description": "Verify legitimate Microsoft domain (must be login.microsoftonline.com)"
     },
@@ -475,10 +514,7 @@
       "type": "dom",
       "weight": 20,
       "condition": {
-        "selectors": [
-          "input[name='loginfmt']",
-          "#i0116"
-        ]
+        "selectors": ["input[name='loginfmt']", "#i0116"]
       },
       "description": "Check for loginfmt input field availability"
     },
@@ -610,11 +646,7 @@
           },
           {
             "type": "substring_present",
-            "values": [
-              "microsoft",
-              "office",
-              "365"
-            ]
+            "values": ["microsoft", "office", "365"]
           }
         ]
       },
@@ -650,9 +682,7 @@
       "code_logic": {
         "type": "resource_from_domain",
         "resource_type": "customcss",
-        "allowed_domains": [
-          "aadcdn.msftauthimages.net"
-        ],
+        "allowed_domains": ["aadcdn.msftauthimages.net"],
         "invert": true
       },
       "severity": "high",
@@ -672,33 +702,21 @@
             "operations": [
               {
                 "type": "substring_present",
-                "values": [
-                  "microsoft",
-                  "office",
-                  "365"
-                ]
+                "values": ["microsoft", "office", "365"]
               },
               {
                 "type": "substring_present",
-                "values": [
-                  "login",
-                  "password",
-                  "signin"
-                ]
+                "values": ["login", "password", "signin"]
               },
               {
                 "type": "pattern_count",
-                "patterns": [
-                  "<form[^>]*action"
-                ],
+                "patterns": ["<form[^>]*action"],
                 "flags": "i",
                 "min_count": 1
               },
               {
                 "type": "has_but_not",
-                "required": [
-                  "action"
-                ],
+                "required": ["action"],
                 "prohibited": [
                   "login.microsoftonline.com",
                   ".auth/login/",
@@ -748,21 +766,13 @@
         "operations": [
           {
             "type": "substring_count",
-            "substrings": [
-              "loginfmt",
-              "i0116",
-              "idSIButton9"
-            ],
+            "substrings": ["loginfmt", "i0116", "idSIButton9"],
             "min_count": 2
           },
           {
             "type": "has_but_not",
-            "required": [
-              "password"
-            ],
-            "prohibited": [
-              "login.microsoftonline.com"
-            ]
+            "required": ["password"],
+            "prohibited": ["login.microsoftonline.com"]
           }
         ]
       },
@@ -793,24 +803,15 @@
             "operations": [
               {
                 "type": "substring_present",
-                "values": [
-                  "microsoft",
-                  "office",
-                  "365"
-                ]
+                "values": ["microsoft", "office", "365"]
               },
               {
                 "type": "substring_present",
-                "values": [
-                  "password",
-                  "passwd"
-                ]
+                "values": ["password", "passwd"]
               },
               {
                 "type": "form_action_check",
-                "required_domains": [
-                  "login.microsoftonline.com"
-                ]
+                "required_domains": ["login.microsoftonline.com"]
               }
             ]
           },
@@ -913,7 +914,7 @@
               "event.shiftKey",
               "event.keyCode"
             ],
-            "min_matches": 2
+            "min_matches": 5
           },
           {
             "type": "not_if_contains",
@@ -981,7 +982,7 @@
                   "String.fromCharCode",
                   "fromCharCode"
                 ],
-                "min_matches": 1
+                "min_matches": 3
               },
               {
                 "type": "substring_present",
@@ -1044,17 +1045,25 @@
       "id": "phi_019_malicious_obfuscation",
       "code_driven": true,
       "code_logic": {
-        "type": "substring_or_regex",
-        "substrings": [
-          "atob(",
-          "unescape(",
-          "eval(",
-          ".split('')",
-          ".reverse()",
-          "String.fromCharCode("
-        ],
-        "regex": "(?:(?:var|let|const)\\s+\\w+\\s*=\\s*(?:atob|unescape)\\([^)]+\\);\\s*eval\\(\\w+\\)|\\w+\\.split\\(['\"]['\"]\\)\\.reverse\\(\\)\\.join\\(['\"]['\"]\\)|String\\.fromCharCode\\((?:\\d+,\\s*){10,}\\d+\\))",
-        "flags": "i"
+        "type": "all_of",
+        "operations": [
+          {
+            "type": "obfuscation_check",
+            "indicators": [
+              "atob(",
+              "unescape(",
+              "eval(",
+              ".split('')",
+              ".reverse()",
+              "String.fromCharCode("
+            ],
+            "min_matches": 2
+          },
+          {
+            "type": "substring_present",
+            "values": ["eval(", "atob(", "unescape(", "String.fromCharCode("]
+          }
+        ]
       },
       "pattern": "(?:(?:var|let|const)\\s+\\w+\\s*=\\s*(?:atob|unescape)\\([^)]+\\);\\s*eval\\(\\w+\\)|\\w+\\.split\\(['\"]['\"]\\)\\.reverse\\(\\)\\.join\\(['\"]['\"]\\)|String\\.fromCharCode\\((?:\\d+,\\s*){10,}\\d+\\))",
       "flags": "i",
@@ -1131,13 +1140,7 @@
             "operations": [
               {
                 "type": "substring_present",
-                "values": [
-                  "microsoft",
-                  "office",
-                  "365",
-                  "outlook",
-                  "azure"
-                ]
+                "values": ["microsoft", "office", "365", "outlook", "azure"]
               },
               {
                 "type": "any_of",
@@ -1188,11 +1191,7 @@
               },
               {
                 "type": "has_but_not",
-                "required": [
-                  "team",
-                  "department",
-                  "support"
-                ],
+                "required": ["team", "department", "support"],
                 "prohibited": [
                   "sign in with microsoft",
                   "continue with microsoft",
@@ -1250,164 +1249,95 @@
             "type": "multi_proximity",
             "pairs": [
               {
-                "words": [
-                  "verify",
-                  "account"
-                ],
+                "words": ["verify", "account"],
                 "max_distance": 50
               },
               {
-                "words": [
-                  "verify",
-                  "information"
-                ],
+                "words": ["verify", "information"],
                 "max_distance": 50
               },
               {
-                "words": [
-                  "verify",
-                  "identity"
-                ],
+                "words": ["verify", "identity"],
                 "max_distance": 50
               },
               {
-                "words": [
-                  "suspended",
-                  "365"
-                ],
+                "words": ["suspended", "365"],
                 "max_distance": 50
               },
               {
-                "words": [
-                  "suspended",
-                  "account"
-                ],
+                "words": ["suspended", "account"],
                 "max_distance": 50
               },
               {
-                "words": [
-                  "suspended",
-                  "office"
-                ],
+                "words": ["suspended", "office"],
                 "max_distance": 50
               },
               {
-                "words": [
-                  "update",
-                  "office"
-                ],
+                "words": ["update", "office"],
                 "max_distance": 50
               },
               {
-                "words": [
-                  "update",
-                  "microsoft"
-                ],
+                "words": ["update", "microsoft"],
                 "max_distance": 50
               },
               {
-                "words": [
-                  "update",
-                  "365"
-                ],
+                "words": ["update", "365"],
                 "max_distance": 50
               },
               {
-                "words": [
-                  "secure",
-                  "microsoft"
-                ],
+                "words": ["secure", "microsoft"],
                 "max_distance": 50
               },
               {
-                "words": [
-                  "secure",
-                  "account"
-                ],
+                "words": ["secure", "account"],
                 "max_distance": 50
               },
               {
-                "words": [
-                  "account",
-                  "security"
-                ],
+                "words": ["account", "security"],
                 "max_distance": 50
               },
               {
-                "words": [
-                  "security",
-                  "verification"
-                ],
+                "words": ["security", "verification"],
                 "max_distance": 50
               },
               {
-                "words": [
-                  "security",
-                  "alert"
-                ],
+                "words": ["security", "alert"],
                 "max_distance": 50
               },
               {
-                "words": [
-                  "login",
-                  "microsoft"
-                ],
+                "words": ["login", "microsoft"],
                 "max_distance": 50
               },
               {
-                "words": [
-                  "microsoft",
-                  "login"
-                ],
+                "words": ["microsoft", "login"],
                 "max_distance": 50
               },
               {
-                "words": [
-                  "microsoft",
-                  "authentication"
-                ],
+                "words": ["microsoft", "authentication"],
                 "max_distance": 50
               },
               {
-                "words": [
-                  "authentication",
-                  "microsoft"
-                ],
+                "words": ["authentication", "microsoft"],
                 "max_distance": 50
               },
               {
-                "words": [
-                  "office",
-                  "365"
-                ],
+                "words": ["office", "365"],
                 "max_distance": 50
               },
               {
-                "words": [
-                  "365",
-                  "login"
-                ],
+                "words": ["365", "login"],
                 "max_distance": 50
               },
               {
-                "words": [
-                  "office",
-                  "login"
-                ],
+                "words": ["office", "login"],
                 "max_distance": 50
               },
               {
-                "words": [
-                  "365",
-                  "suspended"
-                ],
+                "words": ["365", "suspended"],
                 "max_distance": 50
               },
               {
-                "words": [
-                  "office",
-                  "suspended"
-                ],
+                "words": ["office", "suspended"],
                 "max_distance": 50
               }
             ]
@@ -1505,34 +1435,22 @@
                 "type": "multi_proximity",
                 "pairs": [
                   {
-                    "words": [
-                      "microsoft",
-                      "login"
-                    ],
+                    "words": ["microsoft", "login"],
                     "max_distance": 750
                   },
                   {
-                    "words": [
-                      "office",
-                      "sign in"
-                    ],
+                    "words": ["office", "sign in"],
                     "max_distance": 750
                   },
                   {
-                    "words": [
-                      "365",
-                      "authentication"
-                    ],
+                    "words": ["365", "authentication"],
                     "max_distance": 750
                   }
                 ]
               },
               {
                 "type": "has_but_not",
-                "required": [
-                  "login",
-                  "sign"
-                ],
+                "required": ["login", "sign"],
                 "prohibited": [
                   "sign in with microsoft",
                   "continue with microsoft",
@@ -1640,10 +1558,7 @@
       "code_driven": true,
       "code_logic": {
         "type": "pattern_count",
-        "patterns": [
-          "(?:<b></b>){5,}",
-          "(?:<i></i>){5,}"
-        ],
+        "patterns": ["(?:<b></b>){5,}", "(?:<i></i>){5,}"],
         "flags": "i",
         "min_count": 1
       },
@@ -1872,9 +1787,7 @@
         "action": "warn",
         "category": "code_obfuscation",
         "confidence": 0.7,
-        "context_required": [
-          "(?:atob|eval|innerHTML|document\\.write)"
-        ]
+        "context_required": ["(?:atob|eval|innerHTML|document\\.write)"]
       },
       {
         "id": "phi_022_cross_origin_fullscreen_iframe",
@@ -1909,9 +1822,7 @@
       {
         "id": "validate_css_origin",
         "pattern": "customcss",
-        "required_origins": [
-          "aadcdn.msftauthimages.net"
-        ],
+        "required_origins": ["aadcdn.msftauthimages.net"],
         "action": "block",
         "description": "Custom CSS must come from Microsoft CDN"
       }
@@ -1928,5 +1839,53 @@
     "log_matches": true,
     "auto_update": true,
     "fallback_on_error": true
+  },
+  "domain_squatting": {
+    "description": "Domain squatting detection configuration to protect against typosquatting, homoglyphs, and combosquatting attacks",
+    "action": "block",
+    "deviation_threshold": 2,
+    "algorithms": {
+      "levenshtein": true,
+      "homoglyph": true,
+      "typosquat": true,
+      "combosquat": true
+    },
+    "protected_domains": [
+      "microsoft.com",
+      "microsoftonline.com",
+      "office.com",
+      "office365.com",
+      "outlook.com",
+      "hotmail.com",
+      "live.com",
+      "onedrive.com",
+      "sharepoint.com",
+      "azure.com",
+      "windows.com",
+      "xbox.com",
+      "skype.com",
+      "linkedin.com",
+      "github.com",
+      "google.com",
+      "gmail.com",
+      "facebook.com",
+      "twitter.com",
+      "instagram.com",
+      "amazon.com",
+      "apple.com",
+      "paypal.com",
+      "netflix.com",
+      "dropbox.com",
+      "salesforce.com",
+      "adobe.com",
+      "zoom.us",
+      "slack.com",
+      "atlassian.com",
+      "shopify.com",
+      "githubusercontent.com",
+      "azurestaticapps.net"
+    ],
+    "severity": "high",
+    "log_detections": true
   }
 }

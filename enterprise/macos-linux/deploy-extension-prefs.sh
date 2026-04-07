@@ -71,6 +71,15 @@ create_extension_preferences() {
     <string></string>
     <key>cippTenantId</key>
     <string></string>
+    <key>genericWebhook</key>
+    <dict>
+        <key>enabled</key>
+        <false/>
+        <key>url</key>
+        <string></string>
+        <key>events</key>
+        <array/>
+    </dict>
     <key>customRulesUrl</key>
     <string>$custom_rules_url</string>
     <key>updateInterval</key>

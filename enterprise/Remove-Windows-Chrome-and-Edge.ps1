@@ -58,14 +58,51 @@ function Remove-ExtensionSettings {
             }
         }
 
+        # Remove generic webhook subkey and event properties
+        $genericWebhookKey = "$ManagedStorageKey\genericWebhook"
+        if (Test-Path $genericWebhookKey) {
+            $webhookEventsKey = "$genericWebhookKey\events"
+            if (Test-Path $webhookEventsKey) {
+                $eventProperties = Get-ItemProperty -Path $webhookEventsKey -ErrorAction SilentlyContinue
+                if ($eventProperties) {
+                    $eventProperties.PSObject.Properties | Where-Object { $_.Name -match '^\d+$' } | ForEach-Object {
+                        Remove-ItemProperty -Path $webhookEventsKey -Name $_.Name -Force -ErrorAction SilentlyContinue
+                        Write-Host "Removed webhook event property: $($_.Name) from $webhookEventsKey"
+                    }
+                }
+                try {
+                    Remove-Item -Path $webhookEventsKey -Force -ErrorAction SilentlyContinue
+                    Write-Host "Removed webhook events subkey: $webhookEventsKey"
+                } catch {
+                    # Key may not be empty or may have been removed already
+                }
+            }
+
+            foreach ($property in @("enabled", "url")) {
+                if (Get-ItemProperty -Path $genericWebhookKey -Name $property -ErrorAction SilentlyContinue) {
+                    Remove-ItemProperty -Path $genericWebhookKey -Name $property -Force -ErrorAction SilentlyContinue
+                    Write-Host "Removed generic webhook property: $property from $genericWebhookKey"
+                }
+            }
+
+            try {
+                Remove-Item -Path $genericWebhookKey -Force -ErrorAction SilentlyContinue
+                Write-Host "Removed generic webhook subkey: $genericWebhookKey"
+            } catch {
+                # Key may not be empty or may have been removed already
+            }
+        }
+
         # Remove custom branding subkey and all its properties
         $customBrandingKey = "$ManagedStorageKey\customBranding"
         if (Test-Path $customBrandingKey) {
             $brandingPropertiesToRemove = @(
                 "companyName",
-                "companyURL",
                 "productName",
                 "supportEmail",
+                "supportUrl",
+                "privacyPolicyUrl",
+                "aboutUrl",
                 "primaryColor",
                 "logoUrl"
             )

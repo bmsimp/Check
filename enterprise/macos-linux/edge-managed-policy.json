@@ -18,10 +18,16 @@
                 "customRulesUrl": "",
                 "updateInterval": 24,
                 "enableDebugLogging": false,
+                "domainSquatting": {
+                    "enabled": true
+                },
                 "customBranding": {
                     "companyName": "",
                     "productName": "",
                     "supportEmail": "",
+                    "supportUrl": "",
+                    "privacyPolicyUrl": "",
+                    "aboutUrl": "",
                     "primaryColor": "#F77F00",
                     "logoUrl": ""
                 },

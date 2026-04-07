@@ -10,6 +10,7 @@ This script is designed to deploy the extension to both Chrome and Edge. It is r
 
 1. Review the Extension Configuration Settings and Custom Branding Settings variables and update those to your desired values. The current values in the script are the default values. Leaving any unchanged will set the defaults.
 2. If you are leveraging a RMM that has the ability to define the variables in the deployment section of scripting, then you may be able to remove this section and enter the variable definitions into the RMM scripting pages.
+3. For webhook deployment, configure `$enableGenericWebhook`, `$webhookUrl`, and `$webhookEvents` in the script. Supported events are documented in [Webhook Documentation](../../../webhooks.md).
 
 <a href="https://raw.githubusercontent.com/CyberDrain/Check/refs/heads/main/enterprise/Deploy-Windows-Chrome-and-Edge.ps1" class="button primary">Download the Script from GitHub</a>
 {% endtab %}
