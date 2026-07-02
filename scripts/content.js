@@ -1684,6 +1684,58 @@ if (window.checkExtensionLoaded) {
               }
               break;
 
+            case "aitm_origin_validation": {
+              // Block AitM reverse-proxy pages: Microsoft login source markers
+              // present on a non-trusted host with credential inputs (form-less
+              // JS-driven kits bypass form_post_not_microsoft).
+              const requireNonTrustedHost =
+                rule.condition?.require_non_trusted_host !== false;
+              const isTrustedHost = isTrustedLoginDomain(window.location.href);
+              if (requireNonTrustedHost && isTrustedHost) {
+                break;
+              }
+
+              const markers = rule.condition?.microsoft_source_markers || [];
+              const minMatches = rule.condition?.minimum_marker_matches || 3;
+              const aitmPageSource = getPageSource();
+              const matchedMarkers = [];
+              for (const marker of markers) {
+                try {
+                  const markerRegex = new RegExp(marker, "i");
+                  if (markerRegex.test(aitmPageSource)) {
+                    matchedMarkers.push(marker);
+                  }
+                } catch (regexError) {
+                  logger.debug(
+                    `Invalid AitM marker regex "${marker}": ${regexError.message}`
+                  );
+                }
+              }
+
+              if (matchedMarkers.length < minMatches) {
+                break;
+              }
+
+              if (rule.condition?.require_credential_input !== false) {
+                const hasCredentialInput =
+                  document.querySelector(
+                    'input[type="password"], input[name="passwd"], input[name="loginfmt"], input[type="email"], input[name*="email" i], input[id*="password" i]'
+                  ) !== null;
+                if (!hasCredentialInput) {
+                  break;
+                }
+              }
+
+              ruleTriggered = true;
+              reason = `AitM detected: ${matchedMarkers.length} Microsoft login markers (${matchedMarkers
+                .slice(0, 5)
+                .join(", ")}) on non-Microsoft origin "${window.location.hostname}" with credential input present`;
+              logger.warn(
+                `BLOCKING RULE TRIGGERED: ${rule.id} ${rule.description} - ${reason}`
+              );
+              break;
+            }
+
             default:
               logger.warn(`Unknown blocking rule type: ${rule.type}`);
           }
@@ -2662,6 +2714,72 @@ if (window.checkExtensionLoaded) {
         resolve({ threats: [], score: 0 });
       }
     });
+  }
+
+  /**
+   * Run URL-only phishing indicators (those flagged with url_only: true).
+   * Fast synchronous check against the current URL, used as a pre-gate so
+   * URL-shape kits (e.g., wordlist-path morphing tokens) trigger even when
+   * the page has no DOM/content markers for Microsoft.
+   */
+  function checkUrlOnlyIndicators() {
+    try {
+      if (!detectionRules?.phishing_indicators) {
+        return { threats: [], score: 0 };
+      }
+      const currentUrl = window.location.href;
+      const threats = [];
+      let totalScore = 0;
+      for (const indicator of detectionRules.phishing_indicators) {
+        if (!indicator.url_only) continue;
+        let matches = false;
+        try {
+          if (indicator.pattern) {
+            const pattern = new RegExp(
+              indicator.pattern,
+              indicator.flags || "i"
+            );
+            matches = pattern.test(currentUrl);
+          }
+        } catch (regexErr) {
+          logger.debug(
+            `url_only indicator ${indicator.id} regex error: ${regexErr.message}`
+          );
+          continue;
+        }
+        if (matches) {
+          threats.push({
+            id: indicator.id,
+            category: indicator.category,
+            severity: indicator.severity,
+            confidence: indicator.confidence,
+            description: indicator.description,
+            action: indicator.action,
+            matchDetails: "URL (url_only pre-check)",
+          });
+          let scoreWeight = 0;
+          switch (indicator.severity) {
+            case "critical":
+              scoreWeight = 25;
+              break;
+            case "high":
+              scoreWeight = 15;
+              break;
+            case "medium":
+              scoreWeight = 10;
+              break;
+            case "low":
+              scoreWeight = 5;
+              break;
+          }
+          totalScore += scoreWeight * (indicator.confidence || 0.5);
+        }
+      }
+      return { threats, score: totalScore };
+    } catch (e) {
+      logger.warn(`checkUrlOnlyIndicators failed: ${e.message}`);
+      return { threats: [], score: 0 };
+    }
   }
 
   /**
@@ -4253,6 +4371,30 @@ if (window.checkExtensionLoaded) {
       // Step 6: Check if page is an MS logon page (using rule file requirements)
       const msDetection = detectMicrosoftElements();
       if (!msDetection.isLogonPage) {
+        // Step 6a: Pre-check URL-only phishing indicators (e.g., wordlist-path
+        // kits) BEFORE the hasElements performance gate. URL-shape signals must
+        // fire even when the page has stripped all DOM hooks - this is the
+        // whole point of url_only indicators. If any critical url_only
+        // indicator hits, bypass the gate so full processPhishingIndicators
+        // and blocking rules still run.
+        const urlOnlyResult = checkUrlOnlyIndicators();
+        if (urlOnlyResult.threats.length > 0) {
+          logger.warn(
+            `🚨 URL-only indicators triggered: ${urlOnlyResult.threats
+              .map((t) => `${t.id}(${t.severity})`)
+              .join(", ")} (score ${urlOnlyResult.score})`
+          );
+          const hasCriticalUrlThreat = urlOnlyResult.threats.some(
+            (t) => t.severity === "critical" || t.action === "block"
+          );
+          if (hasCriticalUrlThreat) {
+            logger.warn(
+              "🚨 Critical URL-only indicator detected - bypassing hasElements gate for full phishing analysis"
+            );
+            msDetection.hasElements = true;
+          }
+        }
+
         // Check if page has ANY Microsoft-related elements before running expensive phishing indicators
         if (!msDetection.hasElements) {
           logger.log(

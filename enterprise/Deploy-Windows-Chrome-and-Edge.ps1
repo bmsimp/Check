@@ -22,7 +22,7 @@ $cippTenantId = "" # This will set the "Tenant ID/Domain" option in the extensio
 $customRulesUrl = "" # This will set the "Config URL" option in the Detection Configuration settings; default is blank.
 $updateInterval = 24 # This will set the "Update Interval" option in the Detection Configuration settings; default is 24 (hours). Range: 1-168 hours (1 hour to 1 week).
 $urlAllowlist = @() # This will set the "URL Allowlist" option in the Detection Configuration settings; default is blank; if you want to add multiple URLs, add them as a comma-separated list within the brackets (e.g., @("https://example1.com", "https://example2.com")). Supports simple URLs with * wildcard (e.g., https://*.example.com) or advanced regex patterns (e.g., ^https:\/\/(www\.)?example\.com\/.*$).
-$domainSquattingEnabled = 1 # 0 = Disabled, 1 = Enabled; default is 1; controls domain squatting detection from managed policy/config.
+$domainSquattingEnabled = 0 # 0 = Disabled, 1 = Enabled; default is 0; controls domain squatting detection from managed policy/config.
 $enableDebugLogging = 0 # 0 = Unchecked, 1 = Checked (Enabled); default is 0; This will set the "Enable Debug Logging" option in the Activity Log settings.
 
 # Generic Webhook Settings
@@ -143,14 +143,15 @@ function Configure-ExtensionSettings {
     New-ItemProperty -Path $ExtensionSettingsKey -Name "installation_mode" -PropertyType String -Value $installationMode -Force | Out-Null
     New-ItemProperty -Path $ExtensionSettingsKey -Name "update_url" -PropertyType String -Value $UpdateUrl -Force | Out-Null
 
-    # Add toolbar pinning if enabled
-    if ($forceToolbarPin -eq 1) {
-        if ($ExtensionId -eq $edgeExtensionId) {
-            New-ItemProperty -Path $ExtensionSettingsKey -Name "toolbar_state" -PropertyType String -Value "force_shown" -Force | Out-Null
-        } elseif ($ExtensionId -eq $chromeExtensionId) {
-            New-ItemProperty -Path $ExtensionSettingsKey -Name "toolbar_pin" -PropertyType String -Value "force_pinned" -Force | Out-Null
-        }
+    # Toolbar pinning - always write a value so detection can verify either state
+    if ($ExtensionId -eq $edgeExtensionId) {
+        $toolbarProp  = "toolbar_state"
+        $toolbarValue = if ($forceToolbarPin -eq 1) { "force_shown" } else { "hidden" }
+    } elseif ($ExtensionId -eq $chromeExtensionId) {
+        $toolbarProp  = "toolbar_pin"
+        $toolbarValue = if ($forceToolbarPin -eq 1) { "force_pinned" } else { "default_unpinned" }
     }
+    New-ItemProperty -Path $ExtensionSettingsKey -Name $toolbarProp -PropertyType String -Value $toolbarValue -Force | Out-Null
  
     Write-Output "Configured extension settings for $ExtensionId"
 }
