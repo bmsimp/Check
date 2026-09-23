@@ -1,46 +1,34 @@
 # About
 
-The About section provides information about your Check installation, version details, and links to important resources.
+The About section shows which version of Check and of its detection rules you are running, and links to the extension stores, the source code, and CyberDrain. Have the version details to hand when you report a problem.
 
-## Extension Information
+## About Check
 
-### Version Details
+A short description of Check: a browser extension that detects and blocks phishing pages impersonating the Microsoft 365 sign-in page, with central management, activity logging, and CIPP reporting for organisations and managed service providers.
 
-The About section displays key information about your Check installation:
+## Created by CyberDrain
 
-* **Extension Version** - The current version of the Check extension installed in your browser
-* **Detection Rules Version** - The version of the detection rules currently loaded (from either default or custom source)
-* **Last Updated** - When the detection rules were last refreshed from their source
+A short description of CyberDrain, the company that makes Check and provides Microsoft 365 automation and security tools for managed service providers and businesses.
 
-This information is useful when:
+## Links
 
-* Reporting issues to support
-* Verifying you have the latest updates
-* Troubleshooting detection problems
+Each link opens in a new tab:
 
-### Product Information
+* [**Edge Web Store**](https://microsoftedge.microsoft.com/addons/detail/check-by-cyberdrain/knepjpocdagponkonnbggpcnhnaikajg): install and rate Check for Microsoft Edge.
+* [**Chrome Web Store**](https://chromewebstore.google.com/detail/check-by-cyberdrain/benimdeioplgkhanklclahllklceahbe): install and rate Check for Google Chrome and other Chromium-based browsers.
+* [**GitHub Repository**](https://github.com/CyberDrain/Check): view the source code and report issues.
+* [**CyberDrain Website**](https://cyberdrain.com/): learn more about CyberDrain.
 
-**About Check**
+## Version Information
 
-Check is an advanced browser extension that provides real-time protection against Microsoft 365 phishing attacks. Designed for enterprises and managed service providers, Check uses sophisticated detection algorithms to identify and block malicious login pages before credentials can be compromised.
+### Extension Version
 
-The extension integrates seamlessly with existing security workflows, offering centralized management, comprehensive logging, and CIPP integration for MSPs managing multiple Microsoft 365 tenants.
+The version of Check installed in your browser.
 
-**Created by CyberDrain**
+### Detection Rules Version
 
-CyberDrain is a leading provider of Microsoft 365 automation and security solutions for Managed Service Providers (MSPs) and enterprises worldwide. With a focus on innovation, CyberDrain delivers enterprise-grade tools that streamline Microsoft 365 management and enhance security posture through automation.
+The version of the detection rules Check is currently using, whether they come from the default source or from a custom rules URL set on the [Detection Rules](detection-rules.md) page. Shows **Not available** if the rules do not state a version, and **Not cached** if Check has not downloaded any rules yet.
 
-## Important Links
+### Last Updated
 
-The About section provides quick access to essential resources:
-
-### Extension Stores
-
-* [**Chrome Web Store**](https://chromewebstore.google.com/detail/benimdeioplgkhanklclahllklceahbe) - Download, rate, and review the extension for Chrome and Chromium-based browsers
-* [**Microsoft Edge Add-ons**](https://microsoftedge.microsoft.com/addons/detail/check-by-cyberdrain/knepjpocdagponkonnbggpcnhnaikajg) - Download and rate the extension for Microsoft Edge
-* Firefox Add-Ons - Coming soon!
-
-### Development and Support
-
-* [**GitHub Repository**](https://github.com/CyberDrain/Check) - View source code, report issues, and contribute to the project
-* [**CyberDrain Website**](https://cyberdrain.com) - Learn more about CyberDrain's solutions and services
+The date and time recorded in the detection rules themselves, which is when that version of the rules was published, not when Check last downloaded them. If the rules carry no date, it shows when Check last downloaded them instead. It shows **Never** if Check has not downloaded any rules yet.

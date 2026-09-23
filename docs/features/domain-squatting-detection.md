@@ -1,233 +1,129 @@
+---
+description: Warns about or blocks websites whose address imitates one of your own domains.
+---
+
 # Domain Squatting Detection
 
-Domain squatting protection helps keep you safe from fake websites that try to trick you by using look-alike domain names. Attackers create these fake domains to steal your login credentials.
+Domain squatting detection warns about or blocks websites whose address imitates a domain you trust, such as `cntoso.com` or `login-contoso.com` posing as `contoso.com`. It is off by default and protects only the domains you give it, so it does nothing until you turn it on and add your domains.
 
-## What is Domain Squatting?
+## What domain squatting is
 
-Domain squatting (sometimes called "typosquatting") is when attackers register website addresses that are intentionally similar to legitimate sites. For example:
+Domain squatting, also called typosquatting, is registering an address that is deliberately close to a real one, so that a user who mistypes it, or skims a link in an email, lands on the attacker's site instead. The fake site usually copies the real sign-in page to collect usernames and passwords.
 
-- `micros0ft.com` (using a zero instead of the letter O)
-- `microsоft.com` (using a Cyrillic "о" that looks like an English "o")
-- `login-microsoft.com` (adding extra words to a real domain)
+## How it protects you
 
-These fake sites often look exactly like the real Microsoft login page, but they're designed to capture your username and password.
+When a page loads, Check compares its domain with each protected domain. Only the name part is compared, so for `contoso.com` Check looks at `contoso`. The same name on a different ending, such as `contoso.net`, is not flagged.
 
-## How Check Protects You
+Check looks for three kinds of imitation. With the default settings, how closely a domain matches decides whether Check blocks it or shows a warning:
 
-Check automatically watches for these fake domains using four smart detection methods:
+| Imitation                                                                                                | Examples for `contoso.com`                                       | Outcome |
+| -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ------- |
+| Typing mistakes: two letters swapped, a letter missing or doubled, or a neighbouring key pressed          | `cotnoso.com`, `cntoso.com`, `conttoso.com`, `xontoso.com`       | Blocked |
+| Added words attackers commonly use, such as `login`, `secure`, `verify`, `support`, `account`, or `signin` | `login-contoso.com`, `contoso-support.com`, `securecontoso.com`  | Blocked |
+| Other added text, or up to two characters changed                                                         | `contosocloud.com`, `cont0so.com`                                | Warning |
 
-### 1. **Character Difference Detection**
-Spots domains where characters are changed, missing, or swapped around.
+When a page is blocked, the block page shows **Domain Squatting** as the threat and names the domain the site imitates. When a page gets a warning, a banner at the top of the page names the domain it resembles and the page stays usable. The banner appears only while **Show Notifications** is on.
 
-**Examples Check catches:**
-- `microsft.com` → missing the letter "o"
-- `micorsoft.com` → letters swapped ("or" instead of "ro")
-- `microosoft.com` → extra letter added
+A page is blocked only while **Enable Page Blocking** is on. With it off, a match that would be blocked shows the warning banner instead.
 
-### 2. **Look-Alike Character Detection**
-Finds domains using special characters that look similar to normal letters.
+Every match is recorded in **Activity Logs**. If your organisation has set up a webhook, each match is also sent as a `domain_squatting_detected` event; see [webhooks.md](../webhooks.md "mention").
 
-**Examples Check catches:**
-- `micrоsoft.com` → uses a Cyrillic "о" that looks like an English "o"
-- `microsоft.com` → mixes different alphabet characters
-- `micro𝐬oft.com` → uses special Unicode characters
+## Turn it on
 
-### 3. **Typing Mistake Detection**
-Identifies domains based on common typing errors and keyboard slip-ups.
+{% stepper %}
+{% step %}
+### Enable the detection
 
-**Examples Check catches:**
-- `micrisoft.com` → finger slipped to a nearby key
-- `microssoft.com` → double-typed a letter
-- `microosft.com` → transposed letters
+On the **Detection Rules** settings page, turn on **Enable Domain Squatting Detection** on the **Detection Configuration** card.
+{% endstep %}
 
-### 4. **Suspicious Word Combination Detection**
-Spots domains that add words before or after legitimate domains to look more official.
+{% step %}
+### Add the domains to protect
 
-**Examples Check catches:**
-- `secure-microsoft.com`
-- `login-microsoft-verify.com`
-- `microsoft-auth.com`
-- `official-microsoft-support.com`
+Add each domain you want protected to **URL Allowlist (Regex or URL with wildcards)** on the same card, one per line, in the form `https://contoso.com/*`. Check protects the domain named in each entry.
+{% endstep %}
 
-Common suspicious words attackers use: `login`, `secure`, `verify`, `official`, `support`, `auth`, `signin`, `portal`.
+{% step %}
+### Save
 
-## What Domains Are Protected?
+Select **Save Settings**.
+{% endstep %}
+{% endstepper %}
 
-Check protects **30+ popular domains** by default, including:
+Adding a domain to the URL Allowlist also stops Check from scanning that site, which is what you want for your own domains. For more on the allowlist, see [detection-rules.md](../settings/detection-rules.md "mention").
 
-**Microsoft Services:**
-- microsoft.com, microsoftonline.com, office.com, outlook.com, onedrive.com, and more
+## Set it by policy
 
-**Other Popular Services:**
-- google.com, github.com, facebook.com, amazon.com, apple.com, paypal.com, and more
+Admins can set domain squatting detection for every user with the `domainSquatting` policy object:
 
-**Plus: Your URL Allowlist**
+| Policy key                                | Type                         | Default | Description                                                                                                                                          |
+| ----------------------------------------- | ---------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `domainSquatting.enabled`                 | Boolean                      | `false` | Turns domain squatting detection on.                                                                                                                 |
+| `domainSquatting.Action`                  | `block`, `warn`, or `log`    | `block` | `block` blocks close matches and warns about the rest, as described above. `warn` shows the warning banner for every match and never blocks. `log` records matches in **Activity Logs** and sends webhooks, but shows the user nothing. |
+| `domainSquatting.deviationThreshold`      | Integer from `1` to `5`      | `2`     | The largest number of changed characters that still counts as a match. Higher values catch more distant imitations and flag more legitimate sites. |
+| `domainSquatting.algorithms.typosquat`    | Boolean                      | `true`  | Checks for typing mistakes.                                                                                                                          |
+| `domainSquatting.algorithms.combosquat`   | Boolean                      | `true`  | Checks for added words and text.                                                                                                                     |
+| `domainSquatting.algorithms.levenshtein`  | Boolean                      | `true`  | Checks for changed characters, up to `deviationThreshold`.                                                                                           |
+| `domainSquatting.algorithms.homoglyph`    | Boolean                      | `true`  | Turns the look-alike character check on or off.                                                                                                                   |
 
-{% hint style="info" %}
-**Unified Protection:** Check uses your [URL Allowlist](../settings/detection-rules.md#url-allowlist-regex-or-url-with-wildcards) for double protection. Any domains you add there are automatically protected from squatting attempts too!
+`Action` starts with a capital A. The protected domains come from the `urlAllowlist` policy, in the same `https://contoso.com/*` form as on the settings page.
 
-For example, if you add `https://yourcompany.com/*` to your allowlist, Check will also protect against fake domains like `yourcompany.net` or `your-company.com`.
-{% endhint %}
-
-## How It Works in Practice
-
-When you visit a website, Check automatically:
-
-1. **Checks** whether the domain looks similar to any protected domain
-2. **Analyzes** the domain using all four detection methods
-3. **Warns** you if it finds a suspicious match
-4. **Blocks** the page if it's clearly a phishing attempt
-
-You don't need to do anything—the protection works automatically in the background!
-
-## Configuration
-
-{% hint style="warning" %}
-**For most users**: Domain squatting detection works automatically with default settings. You don't need to change anything!
-{% endhint %}
-
-### Page Blocking Control
-
-Check has an **"Enable Page Blocking"** setting in the extension options that controls how suspicious pages are handled. The detection **Action** can be one of three values: `block`, `warn`, or `log`.
-
-- **Page Blocking Enabled** + **Action: "block"** = Page is completely blocked with full-page warning
-- **Page Blocking Enabled** + **Action: "warn"** = Warning banner shown, page remains accessible
-- **Action: "log"** = Detection is recorded in Activity Logs and (if configured) sent to reporting and webhooks. No banner and no block are shown to the user, regardless of the Page Blocking setting.
-- **Page Blocking Disabled** = Never blocks. If **Show Notifications** is enabled, a `block` or `warn` action shows a warning banner instead; a `log` action stays silent.
-
-This gives you control over whether you want aggressive blocking, visible warnings, or silent monitoring for suspicious domains.
-
-### For Advanced Users and IT Departments
-
-Domain squatting detection is configured in your detection rules file (not in the Settings UI). This follows the same pattern as other advanced security features like Rogue Apps Detection.
-
-#### How to Configure
-
-Edit your `rules/detection-rules.json` file to customize:
-
-**Enable/Disable Detection:**
 ```json
 {
-  "domain_squatting": {
-    "action": "block" // Action when detected: "block", "warn", or "log"
-  }
+  "domainSquatting": {
+    "enabled": true,
+    "Action": "block"
+  },
+  "urlAllowlist": [
+    "https://contoso.com/*",
+    "https://contoso.co.uk/*"
+  ]
 }
 ```
 
-**Set Action Type:**
-```json
-{
-  "domain_squatting": {
-    "action": "block"  // "block" = full page block, "warn" = banner only, "log" = silent, telemetry only
-  }
-}
-```
-Note: Page blocking also requires "Enable Page Blocking" to be turned ON in settings.
+A `domainSquatting` policy replaces the user's own setting as a whole, so always include `enabled`. Any key you leave out takes its default. `enablePageBlocking` and `showNotifications` decide whether a match is blocked and whether the banner shows, as they do for the settings above.
 
-**Adjust Sensitivity:**
-    "enabled": false
-  }
-}
-```
-
-**Adjust Sensitivity** (how strict the checking is):
-```json
-{
-  "domain_squatting": {
-    "deviation_threshold": 2
-  }
-}
-```
-- Lower numbers (1) = Very strict, catches fewer variations
-- Higher numbers (3-5) = More lenient, catches more variations
-- Default is 2 (recommended for most organizations)
-
-**Choose Detection Methods:**
-```json
-{
-  "domain_squatting": {
-    "algorithms": {
-      "levenshtein": true,
-      "homoglyph": true,
-      "typosquat": true,
-      "combosquat": true
-    }
-  }
-}
-```
-
-You can turn individual detection methods on or off. We recommend keeping all four enabled for maximum protection.
-
-## For MSPs and Enterprise IT
-
-### Enterprise Policy Management
-
-Domain squatting detection can be managed through Group Policy (GPO) or Microsoft Intune, just like other Check settings.
-
-**What You Can Control via Policy:**
-- Detection sensitivity (character difference threshold)
-- Which detection methods are active
-- Additional protected domains specific to your organization
-
-**What's in the Rules File:**
-- Enable/disable domain squatting detection
-- Default protected domains list
-- Detection rules and patterns
-
-This separation gives you flexibility: you control the core security settings through your detection rules file while still allowing policy-based customization for different clients or departments.
-
-### Adding Organization-Specific Domains
-
-{% hint style="info" %}
-**Use the URL Allowlist!**
-
-The easiest way to protect your organization's domains is to add them to the URL Allowlist in Detection Rules settings. This automatically:
-
-1. Prevents false positives on your internal sites
-2. Protects those domains from squatting attempts
-3. Works without modifying detection rules files
-{% endhint %}
-
-**Example:** Adding `https://contoso.com/*` to your allowlist protects against fake domains like:
-- `cont0so.com` (zero instead of the letter "o")
-- `contos0.com` (zero at the end)
-- `login-contoso.com` (suspicious prefix)
-
-### CIPP Reporting and Webhooks
-
-Domain squatting detections are automatically reported through your existing Check monitoring:
-
-- **Activity Logs**: View all domain squatting warnings and blocks
-- **CIPP Integration**: Squatting detections appear in your CIPP logbook
-- **Webhooks**: Configure webhooks to receive `domain_squatting_detected` events
-
-See [General Settings](../settings/general.md) for configuring reporting and webhooks.
+For where to put policy values on each platform, see the [deployment guides](../deployment/chrome-edge-deployment-instructions/README.md) and [firefox-deployment.md](../deployment/firefox-deployment.md "mention").
 
 ## Troubleshooting
 
-### "Check blocked a legitimate site"
+<details>
 
-If Check blocks a site you trust:
+<summary>Check blocked or warned about a site I trust</summary>
 
-1. **Add it to your URL Allowlist** in Detection Rules settings
-2. The site will be both allowed and protected from squatting
-3. Report the false positive to help improve Check
+Add the site to **URL Allowlist (Regex or URL with wildcards)** on the **Detection Rules** settings page. Check no longer scans an allowlisted site.
 
-### "A phishing site wasn't detected"
+If your organisation has set up false positive reporting, the block page also shows **Report False Positive**, which sends the report to your IT team.
 
-Domain squatting detection works alongside Check's other phishing protections. If a site gets through:
+</details>
 
-1. Use "Report False Negative" if you encounter a phishing site
-2. Check will update rules to catch it in the future
-3. Your report helps protect the entire community
+<details>
 
-### "Settings are grayed out"
+<summary>A look-alike site was not flagged</summary>
 
-If you can't see or change domain squatting settings, your IT department has configured these centrally. This is normal for managed deployments—contact your IT team if you need adjustments.
+Any of these stops a look-alike from being flagged:
 
-## Related Documentation
+* **Enable Domain Squatting Detection** is off.
+* The real domain is not in the URL Allowlist in the form `https://contoso.com/*`.
+* The look-alike uses the real name on a different ending, such as `contoso.net`. Only the name part is compared.
+* The look-alike differs by more characters than the threshold allows. The default is two.
 
-- [Detection Rules](../settings/detection-rules.md) - Configure your URL allowlist
-- [General Settings](../settings/general.md) - Set up reporting and webhooks
-- [Enterprise Deployment](../deployment/) - Deploy Check across your organization
-- [Creating Detection Rules](../advanced/creating-detection-rules.md) - Advanced rule customization
+Check's other phishing protections still examine the page itself, whatever its address.
+
+</details>
+
+<details>
+
+<summary>I see no warning banner</summary>
+
+The banner appears only while **Show Notifications** is on. If your organisation sets `domainSquatting.Action` to `log`, matches are recorded but never shown.
+
+</details>
+
+<details>
+
+<summary>I can't find or change the setting</summary>
+
+Your organisation manages Check through policy. The **Detection Rules** section of the settings page is hidden, so **Enable Domain Squatting Detection** cannot be changed there. Contact your IT team to change it.
+
+</details>

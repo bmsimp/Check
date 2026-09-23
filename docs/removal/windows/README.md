@@ -1,11 +1,11 @@
 ---
-description: Windows removal guidance for Check managed browser configuration
+description: Remove Check and its managed policies from Chrome, Edge, and Firefox on Windows.
 icon: windows
 ---
 
 # Windows
 
-Use the pages below to remove Check enterprise settings from Windows endpoints.
+Remove Check from Windows devices. Chrome and Edge use a removal script; Firefox uses its policies file.
 
 {% content-ref url="chrome-edge.md" %}
 [chrome-edge.md](chrome-edge.md)

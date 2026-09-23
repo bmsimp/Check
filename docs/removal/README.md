@@ -1,11 +1,11 @@
 ---
-description: Guides for removing Check enterprise policies and managed settings
+description: Remove Check and its managed policies from Windows devices.
 icon: trash
 ---
 
 # Removal
 
-Use this section to remove Check deployment configuration and managed policies from supported browsers.
+Remove Check and the managed policies that deployed it from Windows devices, for Chrome, Edge, and Firefox.
 
 {% content-ref url="windows/" %}
 [windows](windows/)

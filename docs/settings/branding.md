@@ -1,336 +1,51 @@
 # Branding
 
-The Branding section lets you customize how Check looks. This is especially useful for organizations that want consistent branding.
-
-{% hint style="info" %}
-**For individual users**
-
-Most individual users can skip this section unless they want to personalize the extension.
-{% endhint %}
-
-## Overview
-
-All user-facing components (suspicious login banner, blocked page, extension popup, and options page) use the same branding configuration. Your custom branding will be displayed consistently across:
-
-* **Suspicious Login Banner** - Warning banner shown on potentially malicious sites
-* **Blocked Page** - Full-page block screen for confirmed threats
-* **Extension Popup** - Extension icon popup
-* **Options Page** - Extension settings page
+Branding replaces Check's name, logo, colour, and support contacts with your organisation's own. Your branding appears on the warning banner shown on suspicious pages, the block page, the extension popup, and this settings page. Individual users can leave every field empty and keep the default Check branding. Changes take effect when you click **Save Settings**.
 
 ## Company Information
 
-{% hint style="warning" %}
-**What if Settings Are Not Visible?**
+### Company Name
 
-If some settings do not appear in your version, it means your organization's IT department has set them for you. This is normal in business environments—your IT team wants to make sure everyone has the same security settings. You will also see text indicating that the extension is being managed by policy.
-{% endhint %}
+Your organisation's name. The warning banner and the block page show it as **Protected by** followed by the name, the block page uses it in the browser tab title, and the popup shows it at the bottom. Empty by default, which keeps the default branding.
 
-### Branding Properties
+### Product Name
 
-You can customize the following properties:
+The name the extension goes by. It replaces **Check** in the popup, in the sidebar of this settings page, and in the block page heading, which reads **Access Blocked by** followed by the name. Leave it empty to keep **Check**.
 
-1. **Company Name** - Enter your organization's name. This appears in the extension interface and blocked page messages (displayed as "Protected by \[Company Name]").
-2. **Product Name** - What you want to call the extension (like "Contoso Security" instead of "Check"). This replaces the default "Check" branding throughout the interface.
-3. **Support Email** - The email address users should contact for help. This address is used by the "Contact Admin" button when phishing sites are blocked.
-4. **Support URL** - URL opened by the popup **Support** link (for example, `https://support.yourcompany.com`).
-5. **Privacy Policy URL** (`privacyPolicyUrl`) - URL opened by the popup **Privacy** link (for example, `https://yourcompany.com/privacy`).
-6. **About URL** (`aboutUrl`) - URL opened by the popup **About** link. Leave empty to use the built-in extension About page.
+### Support Email
+
+The address users contact for help. When it is set, the block page shows a **Contact Admin** button that starts an email to this address; when it is empty, the button is hidden. Set it so that users who reach a blocked page can contact you.
+
+### Support URL
+
+The page the **Support** link in the popup opens, such as your help desk. Empty by default. Set it so the link takes users somewhere useful.
+
+### Privacy URL
+
+The page the **Privacy** link in the popup opens, such as your privacy policy. Empty by default.
+
+### About URL
+
+The page the **About** link in the popup opens. Leave it empty to open the **About** section of this settings page.
 
 ## Visual Customization
 
-1. **Primary Color** - Choose a color that matches your brand (hex format, e.g., `#FF5733`). This color is applied to buttons, headers, and other interface elements throughout the extension.
-2. **Logo URL** - Link to your company logo or local path (e.g., `https://cdn.example.com/logo.png` or `images/custom-logo.png`). This replaces the default Check logo in the extension popup, options page, and blocked page warnings.
+### Primary Color
 
-## Live Preview
+The main colour of buttons, headings, and highlights in the popup, the block page, the warning banner, and this settings page. Choose it with the colour picker. The default is Check's orange, `#F77F00`.
 
-The branding preview shows you exactly how your customizations will appear to users. Changes are reflected immediately as you modify the settings, showing:
+### Logo URL
 
-* Your custom logo and company name in the header
-* How the primary color affects buttons and interface elements
-* The overall visual appearance users will see
+The web address of your logo, such as `https://yourcompany.com/logo.png`. It replaces the Check logo in the popup, the block page, the warning banner, this settings page, and the **Preview**. Use a square image; 48 × 48 to 128 × 128 pixels works well. The address must load in your users' browsers without signing in: if the logo does not appear, open the URL in a new tab to check.
 
-## Configuration Methods
+## Preview
 
-### Method 1: Manual Configuration (Options Page)
+Shows how the popup header and a sample button look with your **Product Name**, **Logo URL**, and **Primary Color**, and updates as you type. This settings page also takes on the new colour straight away. Users see the changes only after you click **Save Settings**.
 
-**Works with:** Chrome, Edge, Firefox
+## Setting branding by policy
 
-1. Open the extension's Options page
-2. Navigate to the "Branding" section
-3. Fill in your branding information:
-   * Company Name
-   * Logo (upload or provide URL)
-   * Primary Color
-   * Support Email
-   * Support URL
-   * Privacy Policy URL
-   * About URL
-4. Click "Save"
+IT administrators can set branding for every user by policy instead of on each device, and a value set by policy takes precedence over anything entered here. For Chrome and Edge on Windows, see [domain-deployment.md](../deployment/chrome-edge-deployment-instructions/windows/domain-deployment.md "mention"). For Firefox, see [firefox-deployment.md](../deployment/firefox-deployment.md "mention").
 
-Your branding will be applied immediately to all components.
-
-### Method 2: Group Policy (GPO) - Chrome & Edge
-
-For enterprise deployments using Windows Group Policy:
-
-1. Create a new GPO or edit an existing one
-2. Navigate to: `Computer Configuration > Administrative Templates > Google Chrome > Extensions`
-3. Add a policy for the Check extension with the following structure:
-
-```json
-{
-  "customBranding": {
-    "companyName": "Your Company",
-    "logoUrl": "https://example.com/logo.png",
-    "primaryColor": "#FF5733",
-    "supportEmail": "security@example.com",
-    "supportUrl": "https://support.example.com",
-    "privacyPolicyUrl": "https://example.com/privacy",
-    "aboutUrl": "https://example.com/about"
-  }
-}
-```
-
-4. Apply the policy to target computers
-5. The extension will automatically use the enterprise branding on managed devices
-
-### Method 3: Firefox Policies (policies.json)
-
-**Works with:** Firefox only
-
-For Firefox deployments, configure branding through the `policies.json` file:
-
-1. Locate or create the policies file:
-   * **Windows:** `%ProgramFiles%\Mozilla Firefox\distribution\policies.json`
-   * **macOS:** `/Applications/Firefox.app/Contents/Resources/distribution/policies.json`
-   * **Linux:** `/etc/firefox/policies/policies.json`
-2. Add the branding configuration under `3rdparty.Extensions`:
-
-```json
-{
-  "policies": {
-    "3rdparty": {
-      "Extensions": {
-        "check@cyberdrain.com": {
-          "customBranding": {
-            "companyName": "Your Company",
-            "productName": "Security Extension",
-            "supportEmail": "security@example.com",
-            "supportUrl": "https://support.example.com",
-            "privacyPolicyUrl": "https://example.com/privacy",
-            "aboutUrl": "https://example.com/about",
-            "primaryColor": "#FF5733",
-            "logoUrl": "https://example.com/logo.png"
-          }
-        }
-      }
-    }
-  }
-}
-```
-
-3. Save the file and restart Firefox
-
-**Note:** The Firefox extension ID is `check@cyberdrain.com`.
-
-### Method 4: Microsoft Intune - Chrome & Edge
-
-For organizations using Microsoft Intune for Chrome and Edge:
-
-1. Create a new Configuration Profile
-2. Select "Custom" configuration
-3. Add the branding configuration as a JSON payload:
-
-```json
-{
-  "customBranding": {
-    "companyName": "Your Company",
-    "logoUrl": "https://example.com/logo.png",
-    "primaryColor": "#FF5733",
-    "supportEmail": "security@example.com",
-    "supportUrl": "https://support.example.com",
-    "privacyPolicyUrl": "https://example.com/privacy",
-    "aboutUrl": "https://example.com/about"
-  }
-}
-```
-
-4. Assign the profile to user or device groups
-5. Branding will be applied to enrolled devices
-
-### Method 5: Chrome Enterprise Policy
-
-For Chrome Enterprise customers:
-
-1. Access the Google Admin Console
-2. Navigate to: `Devices > Chrome > Apps & Extensions`
-3. Select the Check extension
-4. Add the branding configuration under "Policy for extensions"
-5. Save and publish the policy
-
-### Method 6: Windows Registry (Advanced) - Chrome & Edge
-
-For direct registry configuration with Chrome/Edge:
-
-1. Open Registry Editor
-2. Navigate to: `HKLM\Software\Policies\Google\Chrome\3rdparty\extensions\[extension-id]`
-3. Create a new key named `customBranding`
-4. Add string values for each branding property
-5. Restart the browser
-
-## Configuration Priority
-
-When multiple configuration methods are used, they are applied in this order (highest to lowest priority):
-
-1. **Enterprise Policy** (GPO/Intune/Chrome Enterprise/Firefox Policies)
-2. **Manual Configuration** (Options page)
-3. **Default Configuration** (Built-in defaults)
-
-Enterprise policies always take precedence over manual settings.
-
-## Logo Requirements and Tips
-
-### **Technical requirements:**
-
-* Format: PNG, JPG, or SVG
-* Size: 48x48 pixels recommended (maximum 128x128, recommended 200x200px or smaller for enterprise deployments)
-* Must be accessible via HTTPS URL
-
-### **Design tips:**
-
-* Use a square logo for best results
-* Ensure it looks good on both light and dark backgrounds
-* Keep it simple—small logos need to be clear
-
-### **Common logo hosting options:**
-
-* Your company website: `https://yourcompany.com/logo.png`
-* Cloud storage: Upload to Google Drive, Dropbox, etc., and get a public link
-* Image hosting: Use services like Imgur or similar
-
-## Browser-Specific Notes
-
-### Firefox
-
-* Uses extension ID: `check@cyberdrain.com`
-* Configuration is managed through the `policies.json` file
-* Policies file location varies by operating system
-
-### Chrome & Edge
-
-* Configuration is available through GPO, Intune, or Chrome Enterprise Policy
-* Uses Windows Registry for advanced configurations
-* Supports standard Chrome extension policy format
-
-## Troubleshooting Branding Issues
-
-### **Logo not showing:**
-
-1. Check that the URL is correct and accessible
-2. Try opening the logo URL in a new browser tab
-3. Make sure the URL starts with `https://`
-4. Verify the image file isn't too large
-5. Verify that logo URLs are publicly accessible (if using an external URL)
-6. Check the image format (PNG, JPG, and SVG are supported)
-7. Ensure image size is reasonable
-
-### **Colors not applying:**
-
-1. Make sure you clicked "Save Settings"
-2. Try refreshing the page
-3. Check if your organization has locked branding settings
-
-### **Preview not updating:**
-
-1. Try changing the color slightly and changing it back
-2. Refresh the settings page
-3. Clear your browser cache if problems persist
-
-### **Branding Not Appearing**
-
-* Verify the configuration is saved correctly
-* Check browser console for errors
-* Ensure logo URLs are accessible
-* Restart the browser after configuration changes
-
-### **Enterprise Policy Not Working**
-
-* Verify the policy is applied to the correct organizational unit
-* Check that the extension ID matches your deployment
-* Allow 15-30 minutes for policy propagation
-* Run `gpupdate /force` on Windows to force policy refresh
-
-## Example Configurations
-
-### **Example 1: Small Business Setup**
-
-```
-Company Name: Smith & Associates Law
-Product Name: Smith Security
-Support Email: it@smithlaw.com
-Primary Color: #1f4e79 (professional blue)
-Logo URL: https://smithlaw.com/images/logo-small.png
-```
-
-### **Example 2: Large Corporation**
-
-```
-Company Name: Global Manufacturing Inc.
-Product Name: GMI Security Suite
-Support Email: cybersecurity@globalmfg.com
-Primary Color: #c41e3a (corporate red)
-Logo URL: https://assets.globalmfg.com/security/gmi-logo-48.png
-```
-
-### **Example 3: Basic Branding (Chrome/Edge)**
-
-```json
-{
-  "customBranding": {
-    "companyName": "Acme Corp",
-    "primaryColor": "#00AA00"
-  }
-}
-```
-
-### **Example 4: Full Branding (Chrome/Edge)**
-
-```json
-{
-  "customBranding": {
-    "companyName": "Contoso Corporation",
-    "productName": "Contoso Defender",
-    "logoUrl": "https://contoso.com/assets/logo.png",
-    "primaryColor": "#0078D4",
-    "supportEmail": "security@contoso.com",
-    "supportUrl": "https://support.contoso.com",
-    "privacyPolicyUrl": "https://contoso.com/privacy",
-    "aboutUrl": "https://contoso.com/about"
-  }
-}
-```
-
-### **Example 5: Firefox Policy Example**
-
-```json
-{
-  "policies": {
-    "3rdparty": {
-      "Extensions": {
-        "check@cyberdrain.com": {
-          "customBranding": {
-            "companyName": "Contoso Corporation",
-            "productName": "Contoso Defender",
-            "logoUrl": "https://contoso.com/assets/logo.png",
-            "primaryColor": "#0078D4",
-            "supportEmail": "security@contoso.com",
-            "supportUrl": "https://support.contoso.com",
-            "privacyPolicyUrl": "https://contoso.com/privacy",
-            "aboutUrl": "https://contoso.com/about"
-          }
-        }
-      }
-    }
-  }
-}
-```
+{% hint style="warning" %}
+When your organisation manages Check through policy, the **General**, **Detection Rules** and **Branding** sections are hidden, and the page header shows **Managed by Policy**. Your IT department sets these options for you.
+{% endhint %}

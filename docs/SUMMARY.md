@@ -1,6 +1,6 @@
 # Table of contents
 
-- [About](README.md)
+- [About Check](README.md)
 - [Firefox Support](firefox-support.md)
 
 ## Features
@@ -19,10 +19,10 @@
 
 ## Removal
 
-- [Removal Overview](removal/README.md)
+- [Removal](removal/README.md)
   - [Windows](removal/windows/README.md)
-    - [Chrome and Edge](removal/windows/chrome-edge.md)
-    - [Firefox](removal/windows/firefox.md)
+    - [Chrome and Edge (Windows)](removal/windows/chrome-edge.md)
+    - [Firefox (Windows)](removal/windows/firefox.md)
 
 ## Settings
 
@@ -35,6 +35,7 @@
 ## Advanced
 
 - [Creating Detection Rules](advanced/creating-detection-rules.md)
+- [Webhook System](webhooks.md)
 
 ## Troubleshooting
 

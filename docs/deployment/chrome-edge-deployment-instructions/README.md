@@ -1,13 +1,13 @@
 ---
 description: >-
-  This page will outline the various ways that you can deploy Check to your
-  clients' environments across Chrome, Edge, and Firefox
+  Deploy Check to Chrome and Edge on Windows and macOS, by script, RMM, Intune,
+  Group Policy, or MDM.
 icon: bolt
 ---
 
 # Chrome/Edge Deployment Instructions
 
-Check is available for **Chrome**, **Microsoft Edge**, and **Firefox** with deployment guides for each browser.
+Deploy Check to **Google Chrome** and **Microsoft Edge** on Windows and macOS. To deploy to Firefox, see [firefox-deployment.md](../firefox-deployment.md "mention").
 
 ## Chrome/Edge Deployment
 

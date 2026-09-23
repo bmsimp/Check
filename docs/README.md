@@ -16,44 +16,45 @@ layout:
     visible: true
 ---
 
-# About
+# About Check
+
+Check is a browser extension that protects users against Microsoft 365 phishing pages in real time. It spots fake Microsoft sign-in pages, including adversary-in-the-middle (AITM) phishing kits, and blocks them before users type their credentials.
 
 ## What is Check?
 
-**Check** is a browser extension that provides real-time protection against Microsoft 365 phishing attacks.
+Check is built for organisations and managed service providers. It deploys and configures centrally by policy, records what it detects, and can report detections to CIPP for MSPs that manage many Microsoft 365 tenants, or to any webhook.
 
-Specifically designed for enterprises and managed service providers, Check uses sophisticated detection algorithms to identify and block malicious login pages before credentials can be stolen by bad actors.
+Check is available for **Google Chrome** and **Microsoft Edge**. Firefox support, for Firefox 142 or later, is coming soon.
 
-Check is available for **Chrome**, **Microsoft Edge**, and **Firefox** (109+ <mark style="color:orange;">Coming Soon!</mark>).
+Check is free and open source under the AGPL-3.0 licence, and you can deliver it to users fully white-labelled. The source is at [github.com/CyberDrain/Check](https://github.com/CyberDrain/Check).
 
-The extension integrates seamlessly with existing security workflows, offering centralized management, comprehensive logging, and optional CIPP integration for MSPs managing multiple Microsoft 365 tenants.
+Installing Check takes seconds and protects the user straight away.
 
-Check is completely free and open source, can be delivered to users fully white-labeled, and is licensed under AGPL-3. You can contribute to Check at [https://github.com/cyberdrain/Check](https://github.com/cyberdrain/Check).
-
-Installing the extension immediately gives you protection against AITM attacks and takes seconds. Click the install button and you're good to go.
-
-<a href="https://microsoftedge.microsoft.com/addons/detail/check-by-cyberdrain/knepjpocdagponkonnbggpcnhnaikajg" class="button primary">Install for Edge</a> **OR** <a href="https://chromewebstore.google.com/detail/benimdeioplgkhanklclahllklceahbe" class="button primary">Install for Chrome</a> **OR** <a href="./" class="button secondary">Firefox (Coming Soon!)</a>
+<a href="https://microsoftedge.microsoft.com/addons/detail/check-by-cyberdrain/knepjpocdagponkonnbggpcnhnaikajg" class="button primary">Install for Edge</a> <a href="https://chromewebstore.google.com/detail/benimdeioplgkhanklclahllklceahbe" class="button primary">Install for Chrome</a>
 
 ## Why was Check created?
 
-Check was created out of a need for better protection against AITM attacks. During a CyberDrain brainstorming session, CyberDrain's lead developer came up with the idea to create a Chrome extension to protect users:
+Check was created to give users better protection against AITM attacks. During a CyberDrain brainstorming session, CyberDrain's lead developer proposed a browser extension to protect users:
 
-<figure><img src=".gitbook/assets/image.png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image.png" alt="Chat messages proposing a browser extension that confirms a Microsoft sign-in page is genuine"><figcaption></figcaption></figure>
 
-This led to a hackathon in which the team crafted a proof of concept. This proof of concept led to the creation of Check by CyberDrain. CyberDrain decided to offer Check as a free-to-use community resource for everyone.
+A hackathon turned the idea into a proof of concept, which became Check. CyberDrain offers Check free to everyone as a community resource.
 
 ### What information does Check collect?
 
-Nothing. We're not even kidding: we don't collect any data at all. You can set up a CIPP reporting server if you'd like, but it reports directly to your own environment. CyberDrain doesn't believe in making its users a product. We don't sell or collect any information.
+Check sends no browsing data to CyberDrain. It downloads detection rules and a list of known rogue Microsoft 365 apps, and it sends reports only to a CIPP instance or webhook that you set up yourself.
 
 ## How does it look?
 
-When the extension is added for a user, a new icon will appear. This icon is [brandable](settings/branding.md), allowing you to customize it with your own logo and name.
+Once Check is installed, its icon appears in the browser toolbar. You can [brand](settings/branding.md) the icon with your own logo and name.
 
-<figure><img src=".gitbook/assets/image (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (1).png" alt="The Check popup open from the browser toolbar, showing the current page status and protection statistics"><figcaption></figcaption></figure>
 
-When you visit a suspicious page but our certainty that it is phishing is too low, we'll show a banner to warn you. If we're sure that the page is an AITM or phishing attack, we'll block it entirely:
+When a page looks suspicious but Check is not confident it is phishing, Check shows a warning banner at the top of the page. When Check is confident the page is phishing or an AITM attack, it blocks the page and shows this instead:
 
-<figure><img src=".gitbook/assets/image (3).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (3).png" alt="The Check block page, showing the reason for blocking and the Go Back and Contact Admin buttons"><figcaption></figcaption></figure>
 
-This too is completely [brandable](settings/branding.md), and can be made to match company colours. The Contact Admin button is a mailto: link that contains the information about what page the user tried to visit, including a defanged URL.
+The block page can also be [branded](settings/branding.md) to match your company colours. Alongside **Go Back**, it can show two more buttons:
+
+* **Contact Admin** appears when a support email address is set in branding. It opens an email to that address with the blocked address, defanged so it cannot be clicked, and the reason Check blocked it.
+* **Report False Positive** appears when a webhook is set up to receive false positive reports. It sends the details of the block to that webhook. See [webhooks.md](webhooks.md "mention").

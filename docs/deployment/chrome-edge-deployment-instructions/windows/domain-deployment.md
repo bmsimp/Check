@@ -1,63 +1,73 @@
 # Domain Deployment
 
+Deploy Check to Chrome and Edge on domain-joined or Intune-managed Windows devices. Each method force-installs the extension and applies its settings as managed policy, so users cannot remove Check or change the settings you set.
+
 {% tabs %}
 {% tab title="Intune" %}
-The simplest method of Intune deployment is through a Win32 script. Follow the steps below to deploy Check with Intune.
+Intune deploys Check as a Win32 app built from three PowerShell scripts: one installs and configures the extension, one removes it, and one tells Intune whether a device has the configuration you set.
 
-***
+## Prerequisites
 
-### Setup Script
+* Microsoft Intune admin access
+* The [Microsoft Win32 Content Prep Tool](https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool) (`IntuneWinAppUtil.exe`) to package the scripts as an `.intunewin` file
+* Internet access to GitHub from the computer where you run the setup script, which downloads the latest scripts from the Check repository
 
-1. Download a copy of the Setup-Windows-Chrome-and-Edge.ps1 script from the Check repository on GitHub using the button below.
+## Deploy with Intune
+
+{% stepper %}
+{% step %}
+### Generate the scripts
+
+Download `Setup-Windows-Chrome-and-Edge.ps1` from the Check repository and run it on your own computer.
 
 <a href="https://raw.githubusercontent.com/CyberDrain/Check/refs/heads/main/enterprise/Setup-Windows-Chrome-and-Edge.ps1" class="button primary">Download script</a>
 
-2. Run the script locally on your computer to generate the following scripts:
-   1. Deploy-Windows-Chrome-and-Edge.ps1
-   2. Remove-Windows-Chrome-and-Edge.ps1
-   3. Detect-Windows-Chrome-and-Edge.ps1
-3. The setup script will prompt you to configure Check. Follow its guidance to ensure that you enter each value accurately. These values will be used by both the deployment and detection scripts to verify that the extension is properly deployed.
-4. Set the output location the script will use to generate the three new scripts.
+The setup script prompts you for each Check setting, then for an output folder, and writes three configured scripts to that folder:
+
+* `Deploy-Windows-Chrome-and-Edge.ps1`
+* `Remove-Windows-Chrome-and-Edge.ps1`
+* `Detect-Windows-Chrome-and-Edge.ps1`
+
+The deploy and detection scripts carry the same values, which is how Intune confirms that a device has your configuration.
 
 {% hint style="info" %}
-You can also download the three scripts directly from the Check GitHub repo and edit the configuration settings manually.
+You can also download the three scripts directly from the `enterprise` folder of the Check repository and edit the configuration block by hand. Give the deploy and detection scripts identical values.
 {% endhint %}
+{% endstep %}
 
-***
+{% step %}
+### Package the scripts
 
-### Adding to Intune
-
-#### Prerequisites
-
-* Microsoft Intune admin access
-* The [Microsoft Win32 Content Prep Tool](https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool) (`IntuneWinAppUtil.exe`) to package scripts as `.intunewin` files
-
-#### Step 1: Package the Scripts
-
-Intune Win32 apps require an `.intunewin` package. Place your three configured scripts in a folder, then run:
+Place the three configured scripts in one folder, then run:
 
 ```powershell
 .\IntuneWinAppUtil.exe -c "C:\path\to\scripts\folder" -s "Deploy-Windows-Chrome-and-Edge.ps1" -o "C:\path\to\output"
 ```
 
 This creates `Deploy-Windows-Chrome-and-Edge.intunewin`.
+{% endstep %}
 
-#### Step 2: Create the Win32 App in Intune
+{% step %}
+### Create the Win32 app
 
-1. Open the [Microsoft Intune admin center](https://intune.microsoft.com)
-2. Navigate to **Apps** > **Windows**
-3. Click **Add** > Select **Windows app (Win32)** > **Select**
-4. Upload the `.intunewin` file created in Step 1
+1. Open the [Microsoft Intune admin center](https://intune.microsoft.com).
+2. Go to **Apps** > **Windows**.
+3. Select **Add**, choose **Windows app (Win32)**, then select **Select**.
+4. Upload the `.intunewin` file from the previous step.
+{% endstep %}
 
-#### Step 3: Configure App Information
+{% step %}
+### Enter the app information
 
 | Field       | Value                                                                                                        |
 | ----------- | ------------------------------------------------------------------------------------------------------------ |
 | Name        | `Check by CyberDrain - Browser Extension`                                                                    |
 | Description | `Deploys and configures the Check by CyberDrain phishing protection extension for Chrome and Edge browsers.` |
 | Publisher   | Your company name or `CyberDrain`                                                                            |
+{% endstep %}
 
-#### Step 4: Configure Program Settings
+{% step %}
+### Configure the program
 
 | Field                   | Value                                                                             |
 | ----------------------- | --------------------------------------------------------------------------------- |
@@ -66,17 +76,23 @@ This creates `Deploy-Windows-Chrome-and-Edge.intunewin`.
 | Install behavior        | **System**                                                                        |
 | Device restart behavior | **No specific action**                                                            |
 
-#### Step 5: Configure Requirements
+The scripts write to `HKEY_LOCAL_MACHINE`, so **Install behavior** must be **System**.
+{% endstep %}
+
+{% step %}
+### Set the requirements
 
 | Field                         | Value                                                   |
 | ----------------------------- | ------------------------------------------------------- |
 | Operating system architecture | **64-bit**                                              |
 | Minimum operating system      | **Windows 10 1607** (or your minimum supported version) |
+{% endstep %}
 
-#### Step 6: Configure Detection Rules
+{% step %}
+### Add the detection rule
 
-1. Under **Detection rules**, select **Use a custom detection script**
-2. Upload `Detect-Windows-Chrome-and-Edge.ps1`
+1. Under **Detection rules**, select **Use a custom detection script**.
+2. Upload `Detect-Windows-Chrome-and-Edge.ps1`.
 3. Set the following:
 
 | Field                                          | Value  |
@@ -84,55 +100,152 @@ This creates `Deploy-Windows-Chrome-and-Edge.intunewin`.
 | Run script as 32-bit process on 64-bit clients | **No** |
 | Enforce script signature check                 | **No** |
 
-Keep **Run script as 32-bit process on 64-bit clients** set to **No** so the detection script runs in the 64-bit PowerShell/registry context on 64-bit devices. This is important because the script checks values under `HKLM:\SOFTWARE\Policies\...`; running it as 32-bit could read redirected `WOW6432Node` paths and cause detection to fail incorrectly. The detection script checks that all registry keys written by the install script exist and have the correct values. It exits with code `0` when everything matches (app detected) and code `1` when any value is missing or wrong (app not detected, triggers reinstall).
+The detection script checks that every registry value the deploy script writes exists and matches. It exits with code `0` when everything matches, so Intune reports the app as installed, and with code `1` when any value is missing or different, so Intune runs the install again.
+{% endstep %}
 
-#### Step 7: Assign the App
+{% step %}
+### Assign the app
 
-1. Under **Assignments**, click **Add group** under **Required**
+1. Under **Assignments**, select **Add group** under **Required**.
 2. Choose your target:
-   * **All devices** — deploys to every Intune-managed Windows device
-   * **All users** — deploys to devices used by any licensed user
-   * **Select groups** — deploy to specific Azure AD / Entra ID groups
-3. Click **Review + create** > **Create**
+   * **All devices**: every Intune-managed Windows device
+   * **All users**: devices used by any licensed user
+   * **Select groups**: specific Microsoft Entra ID groups
+3. Select **Review + create**, then **Create**.
+{% endstep %}
+{% endstepper %}
 
-### Updating Settings
+## Update settings
 
-When you need to change extension settings (e.g., enable page blocking or update branding):
+{% stepper %}
+{% step %}
+### Generate new scripts
 
-1. Re-run the setup script with new values, or manually edit the config blocks in both `Deploy-` and `Detect-` scripts
-2. Re-package with `IntuneWinAppUtil.exe`
-3. In Intune, either update the existing app or delete and recreate it with the new package
+Run the setup script again with the new values, or edit the configuration block in both the deploy and detection scripts so the two match.
+{% endstep %}
 
-Because the detection script body changes when settings change, Intune will detect the app as "not installed" on endpoints and automatically redeploy with the updated configuration.
+{% step %}
+### Package the new deploy script
 
-### Uninstalling
+Run `IntuneWinAppUtil.exe` again to build a new `.intunewin` file.
+{% endstep %}
 
-To remove the extension from managed devices:
+{% step %}
+### Update the app in Intune
 
-* **Option A:** In Intune, change the app assignment from **Required** to **Uninstall**. Intune will run the `Remove-Windows-Chrome-and-Edge.ps1` script on targeted devices.
-* **Option B:** Delete the app from Intune entirely. Note that this stops management but does not actively remove the registry keys from devices that already have them.
+In the existing app, upload the new `.intunewin` file, then under **Detection rules** upload the new `Detect-Windows-Chrome-and-Edge.ps1`. Alternatively, delete the app and create it again with the new files.
+{% endstep %}
+{% endstepper %}
 
-### Troubleshooting
+Devices still carrying the old values fail the new detection script, so Intune reports the app as not installed and runs the new deploy script. If you replace only the package, the old detection script keeps passing on existing devices and they keep the old settings.
 
-* **Extension not appearing after deployment:** Check that the install script ran as System (not User). Verify registry keys exist under `HKLM:\SOFTWARE\Policies\Google\Chrome\ExtensionSettings\` and `HKLM:\SOFTWARE\Policies\Microsoft\Edge\ExtensionSettings\`.
-* **Intune keeps reinstalling the app:** The detection script values don't match what the install script wrote. Ensure both scripts have identical configuration values.
-* **Detection script shows as failed:** Run the detection script manually on a test device as Administrator to see which check fails (it will exit at the first mismatch).
+## Uninstall
+
+* **Change the assignment to Uninstall:** in Intune, change the app assignment from **Required** to **Uninstall**. Intune runs `Remove-Windows-Chrome-and-Edge.ps1` on the targeted devices, which removes the Check policy values and the force-install entries, so Chrome and Edge uninstall the extension.
+* **Delete the app:** deleting the app from Intune stops management but leaves the registry values on devices that already have them, so Check stays installed and configured.
+
+## Troubleshooting
+
+* **Extension not appearing after deployment:** confirm that the install ran as **System**, not as the user. Check that registry keys exist under `HKLM:\SOFTWARE\Policies\Google\Chrome\ExtensionSettings\` and `HKLM:\SOFTWARE\Policies\Microsoft\Edge\ExtensionSettings\`.
+* **Intune keeps reinstalling the app:** the detection script values do not match what the deploy script wrote. Make sure both scripts have identical configuration values.
+* **Detection script shows as failed:** run the detection script by hand on a test device as Administrator. It stops at the first mismatch and prints which value failed.
 {% endtab %}
 
 {% tab title="Group Policy" %}
-1. Download the following files from the Check repository on GitHub:
-   1. ​[Deploy-ADMX.ps1](https://github.com/CyberDrain/Check/blob/main/enterprise/Deploy-ADMX.ps1)
-   2. ​[Check-Extension.admx](https://github.com/CyberDrain/Check/blob/main/enterprise/admx/Check-Extension.admx)​
-   3. ​[Check-Extension.adml](https://github.com/CyberDrain/Check/blob/main/enterprise/admx/en-US/Check-Extension.adml)​
-2. Run `Deploy-ADMX.ps1`. As long as you keep the other two files in the same folder, it will correctly add the available objects to Group Policy.
-3. Open Group Policy and create a policy using the imported settings at `Computer Configuration → Policies → Administrative Templates → CyberDrain → Check - Microsoft 365 Phishing Protection`.
+Group Policy deploys Check through administrative templates (ADMX) that add a **CyberDrain** category to the Group Policy editor, with separate settings for Microsoft Edge and Google Chrome.
 
-![](<../../../.gitbook/assets/image (2).png>)
+## Install the templates
+
+{% stepper %}
+{% step %}
+### Download the files
+
+Download these three files from the Check repository:
+
+* [Deploy-ADMX.ps1](https://github.com/CyberDrain/Check/blob/main/enterprise/Deploy-ADMX.ps1)
+* [Check-Extension.admx](https://github.com/CyberDrain/Check/blob/main/enterprise/admx/Check-Extension.admx)
+* [Check-Extension.adml](https://github.com/CyberDrain/Check/blob/main/enterprise/admx/en-US/Check-Extension.adml)
+
+Arrange them in this folder layout. The script looks for the templates in these subfolders and stops with an error if either file is missing:
+
+```
+Deploy-ADMX.ps1
+admx\Check-Extension.admx
+admx\en-US\Check-Extension.adml
+```
+{% endstep %}
+
+{% step %}
+### Run the deployment script
+
+Open PowerShell as Administrator in the folder that holds `Deploy-ADMX.ps1`, then run one of the following.
+
+To install the templates on this computer only:
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\Deploy-ADMX.ps1
+```
+
+To install the templates to the domain's Central Store, so they are available to every administrator editing Group Policy in the domain:
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\Deploy-ADMX.ps1 -Scope Domain
+```
+
+| Parameter     | What it does                                                                                                                                                                               |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `-Scope`      | `Local` (the default) copies the templates to `%SystemRoot%\PolicyDefinitions` on this computer. `Domain` copies them to `\\<domain>\SYSVOL\<domain>\Policies\PolicyDefinitions`.          |
+| `-DomainName` | The domain to use with `-Scope Domain`. Defaults to the domain of the signed-in user. Set it when running from a computer outside the domain you are deploying to.                          |
+| `-Uninstall`  | Removes the Check templates from the location `-Scope` points to instead of installing them.                                                                                                 |
+
+A domain install needs an account with write access to the domain's SYSVOL share.
+
+{% hint style="warning" %}
+If the domain has no Central Store yet, `-Scope Domain` creates one containing only the Check templates. Group Policy editors in the domain then read templates from the Central Store alone, so every other administrative template disappears from them. Before you run the script, copy the contents of `%SystemRoot%\PolicyDefinitions` from a management computer to `\\<domain>\SYSVOL\<domain>\Policies\PolicyDefinitions`.
+{% endhint %}
+{% endstep %}
+
+{% step %}
+### Open the Check policies
+
+In Group Policy Management, create a Group Policy Object or edit an existing one, then go to **Computer Configuration** > **Policies** > **Administrative Templates** > **CyberDrain** > **Check - Phishing Protection**. The settings are split into **Microsoft Edge** and **Google Chrome** folders.
+
+![The Local Group Policy Editor showing the CyberDrain > Check - Phishing Protection > Microsoft Edge policies](<../../../.gitbook/assets/image (2).png>)
+{% endstep %}
+
+{% step %}
+### Enable the installation policies
+
+Enable **Configure Check extension installation (Edge)** in the **Microsoft Edge** folder and **Configure Check extension installation (Chrome)** in the **Google Chrome** folder. These are the policies that force-install Check, keep it updated from the browser's store, and pin it to the toolbar. The other Check policies configure the extension but do not install it.
+{% endstep %}
+
+{% step %}
+### Configure the other settings
+
+Set any other Check policies you need in each browser's folder, such as **Enable page blocking**, **Enable CIPP reporting**, and the branding settings. Each policy's help text in the editor describes what it sets.
+{% endstep %}
+
+{% step %}
+### Link the policy
+
+Link the Group Policy Object to the organisational units that hold your target computers. Devices pick up the policy at their next Group Policy refresh, or straight away after `gpupdate /force`.
+{% endstep %}
+{% endstepper %}
+
+## Remove the templates
+
+Run the script with `-Uninstall` and the same `-Scope` you installed with:
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\Deploy-ADMX.ps1 -Scope Domain -Uninstall
+```
+
+Removing the templates does not remove Check from devices. To stop deploying Check, unlink or delete the Group Policy Object first.
 {% endtab %}
 
 {% tab title="CIPP Standard" %}
-You can use a CIPP standard to deploy Check. It works the same way as the [#intune](domain-deployment.md#intune "mention") instructions, but CIPP handles the installation and detection-script creation.
+A CIPP standard deploys Check the same way as the [#intune](domain-deployment.md#intune "mention") method, with CIPP creating the install and detection scripts for you.
 
-For more, see our [Standards documentation](https://standards.cipp.app/standards/deploycheckchromeextension).
+For setup, see the [CIPP Standards documentation](https://standards.cipp.app/standards/deploycheckchromeextension).
 {% endtab %}
 {% endtabs %}

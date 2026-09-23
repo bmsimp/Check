@@ -1,166 +1,115 @@
 # Activity Logs
 
-## Controls and Configuration
+The Activity Logs show what Check has done on the pages you visit: phishing pages it blocked, threats it warned you about, and other security events. Check always records security events. Routine activity, such as each page it scans and each visit to a genuine Microsoft sign-in page, is recorded only while **Developer Mode** is on.
 
-The Activity Logs show you everything Check has been doing to protect you. Here's how to use this information effectively.
+## Logging Options
 
-## Debug and Developer Settings
+### Developer Mode (enables debug logging)
 
-### **Enable Debug Logging**
+Records extra detail alongside the security events: every page Check scans, every visit to a genuine Microsoft sign-in page, and Check's own diagnostic messages. Select **Save Settings** after changing it. Disabled by default. Turn it on while you troubleshoot a problem or work with support, then turn it off again, because the extra entries fill the table and make security events harder to find.
 
-When enabled, Check logs additional detail about page scans, rule evaluations, and internal operations. By default, Check only logs blocked pages and security events. Enable debug logging when:
+### Simulate Enterprise Policy Mode (Dev Only)
 
-- Troubleshooting detection issues
-- Working with support to diagnose problems
-- Investigating false positives or missed detections
+Previews the options page as it appears when an organisation manages Check by policy, using sample policy values. It takes effect as soon as you tick it. This option appears only in a development copy of Check loaded unpacked into the browser; a copy installed from a browser store or deployed by your IT department does not show it. Disabled by default.
 
-**Important:** Debug logging increases storage usage and should be disabled after troubleshooting.
+## Filtering and Managing Logs
 
-### **Developer Mode**
+### Event Type Filter
 
-Enables additional console logging visible in the browser's Developer Tools. This provides real-time information about Check's operations for advanced troubleshooting.
+The drop-down list beside the logging options offers **All Events**, **Security Events**, **URL Access**, **Threats Detected**, **Page Scans**, and **Debug Events**.
 
-### **Simulate Enterprise Policy Mode (Dev Only)**
+### Refresh
 
-This development-only feature simulates how the extension behaves when managed by enterprise policies. It is useful for administrators testing policy deployments or understanding the end-user experience under policy management.
+Reloads the table so it includes events recorded since you opened the page.
 
-## Log Filtering and Management
+### Clear Logs
 
-### **Event Type Filter**
+Permanently deletes every stored log entry after you confirm. This cannot be undone, so export the logs first if you might need them.
 
-Filter logs by event type to focus on specific activities:
+### Export Logs
 
-- **All Events** - Shows everything Check has logged
-- **Security Events** - Threats detected, pages blocked, warnings issued
-- **URL Access** - Pages Check has analyzed (requires debug logging)
-- **Threats Detected** - Only shows actual threats found and blocked
-- **Page Scans** - Detailed scanning activity (requires debug logging)
-- **Debug Events** - Internal operations and detailed analysis (requires debug logging)
+Downloads everything Check has stored, not only the entries shown in the table, as a JSON file named after the current date, for example `check-logs-2026-09-23.json`. The file also records the Check version. Send this file to support when you report a problem.
 
-### **Log Actions**
+## Reading the Log Table
 
-- **Refresh** - Reload the current logs from storage
-- **Clear Logs** - Permanently delete all stored logs (cannot be undone)
-- **Export Logs** - Download logs as a JSON file for support or analysis
+The table lists the 100 most recent entries, newest first. Check keeps a rolling history, so the oldest entries are removed as new ones arrive. Each row has these columns:
 
-## Reading Your Logs <a href="#reading-your-logs" id="reading-your-logs"></a>
+* **Timestamp**: when the event happened.
+* **Event Type**: what kind of event it was, for example **Threat Blocked**.
+* **URL/Domain**: the site involved.
+* **Threat Level**: how serious Check judged it, for example **HIGH** or **NONE**.
+* **Action Taken**: what Check did about it.
+* **Details**: a summary of what happened.
 
-When you open the Activity Logs section, you'll see a table with recent activity. Here's what each column means:
+Select a row to expand it and see the full detail of the event, including the criteria Check used to reach its decision.
 
-- **Timestamp** - When the event happened
-- **Event Type** - What kind of activity (like "Threat Blocked" or "Page Scanned")
-- **URL/Domain** - Which website was involved
-- **Threat Level** - How dangerous it was (None, Low, Medium, High, Critical)
-- **Action Taken** - What Check did about it
-- **Details** - A summary of what happened
+### Common Log Entries
 
-Additionally, clicking a row allows you to review detailed information about the event and the criteria used to determine the threat level.
+| Event type | What it means |
+| --- | --- |
+| **Threat Blocked** | Check identified a phishing page and blocked it. |
+| **Threat Detected** | Check identified a phishing page but **Enable Page Blocking** is off, so it showed a warning instead of blocking the page. |
+| **Page Scanned** | Check scanned a page and found nothing wrong. Recorded only while **Developer Mode** is on. |
+| **Legitimate Access** | Check recognised the page as a genuine Microsoft sign-in page. Recorded only while **Developer Mode** is on. |
 
-{% hint style="info" %}
-By default, Check only logs blocked pages. If you want to show valid login pages, check `Enable Debug Logging`.
-{% endhint %}
+## Investigating a Blocked Page
 
-### Understanding Common Log Entries <a href="#understanding-common-log-entries" id="understanding-common-log-entries"></a>
+{% stepper %}
+{% step %}
+### Note the time
 
-**"Page Scanned" with Threat Level "None"**
+Note roughly when Check blocked the page.
+{% endstep %}
 
-- This is normal—Check scanned a page and found it safe
-- You'll see lots of these for legitimate websites
+{% step %}
+### Find the entry
 
-**"Threat Blocked" with Threat Level "High"**
+Open the Activity Logs and look for a **Threat Blocked** entry at that time.
+{% endstep %}
 
-- Check found a dangerous page and blocked it
-- This is Check protecting you from a real threat
+{% step %}
+### Review the detail
 
-**"Legitimate Access" with Threat Level "None"**
+Select the entry to see the URL and why Check blocked it. Check whether the URL is a site you meant to visit.
+{% endstep %}
 
-- Check verified this was a real Microsoft login page
-- You can trust this page with your credentials
+{% step %}
+### Report a wrong block
 
-### Investigating Suspicious Activity <a href="#investigating-suspicious-activity" id="investigating-suspicious-activity"></a>
+If you believe Check blocked a legitimate site, export the logs and send them to your IT department or support. See [common-issues.md](../troubleshooting/common-issues.md "mention") for known causes first.
+{% endstep %}
+{% endstepper %}
 
-If you think something suspicious happened:
+## Collecting Logs for Support
 
-1. **Look for recent "Threat Blocked" entries**
-2. **Click on the entry to expand details**
-3. **Check the URL** - Does it look like a site you tried to visit?
-4. **Note the time** - Does it match when you had problems?
+{% stepper %}
+{% step %}
+### Turn on Developer Mode
 
-**Example Investigation:**
+Tick **Developer Mode (enables debug logging)** and select **Save Settings**.
+{% endstep %}
 
-You tried to log in to Office 365 but were blocked. The logs show:
+{% step %}
+### Reproduce the problem
 
-* **Timestamp:** 2024-01-15 14:30:22
-* **Event Type:** Threat Blocked
-* **URL:** office365-login-secure.com (suspicious domain)
-* **Threat Level:** High
-* **Details:** Phishing page impersonating Microsoft login
+Repeat whatever caused the problem, such as visiting the page that was blocked.
+{% endstep %}
 
-This shows that Check correctly blocked a fake Office 365 page.
+{% step %}
+### Export the logs
 
-### Configuring Log Detail Level <a href="#configuring-log-detail-level" id="configuring-log-detail-level"></a>
+Select **Export Logs** straight away and save the file.
+{% endstep %}
 
-**For regular users:**
+{% step %}
+### Send the file
 
-- Leave "Enable Debug Logging" unchecked
-- Leave "Enable Developer Console Logging" unchecked
-- Leave "Simulate Enterprise Policy Mode (Dev Only)" unchecked
+Send the exported file to support with a description of the problem.
+{% endstep %}
 
-**For troubleshooting or working with support:**
+{% step %}
+### Turn off Developer Mode
 
-1. Check "Enable Debug Logging"
-2. Reproduce the problem
-3. Export logs (see below)
-4. Send logs to support (see [Common Issues](../troubleshooting/common-issues.md) for additional troubleshooting steps)
-5. Uncheck debug logging when done (saves storage space)
-
-**For admins wanting to simulate the end-user experience:**
-
-1. Click "Simulate Enterprise Policy Mode (Dev Only)"
-2. Review behavior, investigate settings, and capture screenshots for documentation
-3. Uncheck the setting when done and refresh the page to return to normal operations
-
-### Managing Your Log Data <a href="#managing-your-log-data" id="managing-your-log-data"></a>
-
-**Refreshing Logs:**
-
-- Click "Refresh" to see the latest activity
-- Useful if you just experienced a security event
-
-**Clearing Old Logs:**
-
-1. Click "Clear Logs"
-2. Confirm you want to delete all log history
-3. **Warning:** This permanently deletes all logs
-
-**Exporting Logs for Support:**
-
-1. Click "Export Logs"
-2. Choose where to save the file
-3. The file will be named like `check-logs-2024-01-15.json`
-4. Send this file to support when reporting issues
-
-### Real-World Scenarios <a href="#real-world-scenarios" id="real-world-scenarios"></a>
-
-**Scenario 1: Checking if Check is working**
-
-1. Go to Activity Logs
-2. Look for recent "Page Scanned" entries
-3. If you see recent entries, Check is working
-4. If no recent entries, try visiting a Microsoft website to test
-
-**Scenario 2: Investigating a blocked page**
-
-1. Note the time when you were blocked
-2. Go to Activity Logs
-3. Look for "Threat Blocked" entries around that time
-4. Click the entry to see why it was blocked
-5. If you think it was blocked incorrectly, contact support with the log details or check [Common Issues](../troubleshooting/common-issues.md) for known problems
-
-**Scenario 3: Preparing for support**
-
-1. Enable debug logging
-2. Try to reproduce the problem
-3. Export logs immediately after the problem occurs
-4. Disable debug logging
-5. Send the exported file to support or check [Common Issues](../troubleshooting/common-issues.md) first
+Untick **Developer Mode (enables debug logging)** and select **Save Settings**.
+{% endstep %}
+{% endstepper %}

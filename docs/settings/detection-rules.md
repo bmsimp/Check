@@ -1,207 +1,89 @@
 # Detection Rules
 
-This section controls how Check recognizes and responds to phishing threats. Most users can leave these at their default settings, but here's how to manage them.
-
-## Understanding How Detection Works
-
-Check uses a constantly updated list of rules to identify fake Microsoft login pages. Think of them like antivirus definitions—they need to be kept current to protect against new threats.
+Detection Rules controls where Check gets the rules it uses to recognise phishing pages, how often it refreshes them, which sites it never scans, and whether it looks for look-alike domains. It also shows the rules currently in use and lets you test candidate rules before they go live. Most people can leave every setting here at its default.
 
 ## Detection Configuration
 
-### **Config URL**
+### Config URL
 
-This field allows you to specify a custom URL for fetching detection rules. Leave this field empty to use the default CyberDrain rules. If your organization provides custom detection rules, enter the full HTTPS URL here (e.g., `https://your-company.com/custom-rules.json`).
+The address Check downloads its detection rules from. By default this is the CyberDrain rules file on GitHub, and leaving the field empty also uses the CyberDrain rules. A custom rules file replaces the CyberDrain rules completely rather than adding to them, so enter a URL here only when your IT department gives you one. If Check cannot download the file, it uses the rules built into the extension until the next successful download. To build a custom rules file, see [creating-detection-rules.md](../advanced/creating-detection-rules.md "mention").
 
-**For most users:**
+### Update Interval (hours)
 
-1. Leave the "Config URL" field empty or at its default
-2. Set "Update Interval" to 24 hours
-3. Click "Save Settings"
+How often Check downloads the rules again, from 1 to 168 hours (one week). The default is 24 hours. Leave it at 24 unless your IT department asks for something different; a shorter interval picks up new rules sooner.
 
-**For organizations with custom security rules:**
+### URL Allowlist (Regex or URL with wildcards)
 
-1. Enter your organization's custom rules URL (provided by IT)
-2. Custom rules, including allowlists, can be created using the [Creating Detection Rules](../advanced/creating-detection-rules.md "mention") guide.
+Sites Check never scans, one pattern per line. On a matching page Check runs no phishing detection at all, so use this for internal sites or trusted services that trigger a false warning. Your entries are added to the exclusions in the detection rules; they do not replace them. The list is empty by default.
 
-### **Update Interval (hours)**
+Each line is either a URL with `*` wildcards or a regular expression that starts with `^`:
 
-Controls how often Check fetches updated detection rules. The default is 24 hours. Set the update interval based on your security requirements:
+* `https://training.yourcompany.com/*` matches every page on that site.
+* `https://*.yourcompany.com/*` matches every subdomain of `yourcompany.com`, but not `yourcompany.com` itself.
+* `https://yourcompany.com` (no path) matches every page on that site. A URL with a path and no trailing `*` matches that exact address only.
+* `^https://trusted\.example\.com/.*` is a regular expression, used as written.
 
-* High-security environments: 6-12 hours
-* Standard environments: 24 hours
-* Limited bandwidth: 48-72 hours
-
-### **URL Allowlist (Regex or URL with wildcards)**
+Domains in the allowlist also become protected domains for **Enable Domain Squatting Detection**: an entry such as `https://yourcompany.com/*` makes Check watch for look-alikes of `yourcompany.com`. Look-alikes are compared on the name without its ending, so `yourcompany.net` counts as the same name as `yourcompany.com` and is not flagged.
 
 {% hint style="info" %}
-**Need to allowlist a phishing training service?**
+**Allowlisting a phishing simulation platform**
 
-MSPs and IT departments commonly need to exclude phishing training platforms (like KnowBe4, Proofpoint, etc.) from detection. Check [Advanced → Creating Detection Rules](../advanced/creating-detection-rules.md#exclusions) for technical details.
+Add the platform's URLs here so its training pages are not blocked. To exclude a platform for every user from a custom rules file instead, see [Exclusions](../advanced/creating-detection-rules.md#exclusions).
 {% endhint %}
 
-Add URLs or patterns that should be excluded from phishing detection. This is useful for internal company sites or trusted third-party services that might trigger false positives.
+### Enable Domain Squatting Detection
 
-**Dual Protection:** Your allowlist serves two purposes:
+Checks each site you visit against your protected domains and flags look-alikes: typosquats (misspellings), homoglyphs (characters that look alike), and combosquats (a protected name with extra words added). Off by default. Protected domains come from the detection rules and from the domains in your **URL Allowlist**, so turn this on once your organisation's own domains are in the allowlist. A close look-alike is blocked when **Enable Page Blocking** is on, and any other match shows a warning banner when **Show Notifications** is on. Both settings are on [General](general.md). For how detection works, see [domain-squatting-detection.md](../features/domain-squatting-detection.md "mention").
 
-1. **Prevents false positives**—Sites you add won't be flagged as phishing
-2. **Domain squatting protection**—Domains extracted from your allowlist are automatically protected against typosquatting and look-alike attacks
+### Update Rules Now
 
-For example, adding `https://yourcompany.com/*` will both allow that site AND protect against fake domains like `yourcompany.net`, `your-company.com`, or `y0urcompany.com`.
+Downloads the rules from the saved **Config URL** straight away instead of waiting for the next update. If you have just changed the Config URL, click **Save Settings** first. When the download finishes, Check shows **Detection rules updated successfully**. Reload this settings page to see the new rules in the **Configuration Overview**, and reload any other open tabs, because a page keeps the rules it loaded with. If the **Version** in the Configuration Overview has not changed after an update you expected, open the Config URL in a browser tab to check that it returns the rules file.
 
-Learn more about [Domain Squatting Detection](../features/domain-squatting-detection.md).
+## Configuration Overview
 
-**How it works:** Your allowlist patterns **supplement rather than replace** the default CyberDrain exclusions, providing additional protection without losing baseline coverage.
+A read-only view of the rules Check is using. It opens on **Basic Information**, which shows the rules **Version**, the **Last Updated** date recorded in the rules file, and a description. Below it are collapsed sections for each part of the rules that is present: **Detection Thresholds**, **Trusted Login Patterns**, **Microsoft Domain Patterns**, **Domain Squatting Detection**, **Rogue Apps Detection**, **Phishing Indicators**, **Microsoft 365 Detection Requirements**, **Exclusion System**, and **Configuration Statistics**. Click a section's header to open it. Use the **Version** to confirm which rules are loaded.
 
-You can use:
+### Expand All
 
-* **Simple URLs with wildcards:** `https://google.com/*` or `https://*.microsoft.com/*`
-* **Advanced regex patterns:** `^https://trusted\.example\.com/.*`
+Opens every section at once. The button then reads **Collapse All** and closes them again.
 
-**Copy-paste examples (based on existing default exclusions):**
+### Show Raw JSON
 
-```
-https://*.google.com/*
-https://*.auth0.com/*
-https://*.amazon.com/*
-https://*.facebook.com/*
-https://training.your-company.com/*
-https://*.internal-domain.com/*
-```
+Shows the complete rules file as JSON instead of the formatted sections. The button then reads **Show Formatted** and switches back. Use it to look up a specific rule or pattern.
 
-Enter one pattern per line. These patterns are added to the exclusion rules without replacing the entire ruleset from your Config URL.
+## Rule Playground (Beta)
 
-### Updating Rules Manually
-
-Sometimes you need to update rules immediately:
-
-1. **When to do this:**
-   * You've heard about a new phishing campaign
-   * Check isn't detecting a threat it should
-   * Your IT department asks you to update them
-2. **How to do it:**
-   * Go to the Detection Rules section
-   * Click "Update Rules Now"
-   * Wait for the "Rules updated successfully" message
-
-## Understanding the Configuration Overview
-
-The Configuration Overview section displays your current detection rules in two viewing modes:
-
-**Formatted View (default):**
-
-* **Version number** - Higher numbers are newer
-* **Last Updated** - Should be recent (within your update interval)
-* **Total Rules** - More rules generally mean better protection
-* **Rule Categories** - Shows a breakdown by rule type (exclusions, indicators, etc.)
-
-**Raw JSON View:**
-
-* Click "Show Raw JSON" to view the complete detection rules file
-* Useful for advanced users and troubleshooting
-* Shows the exact configuration being used by the extension
-
-**If you see problems:**
-
-* Very old "Last Updated" date → Click "Update Rules Now"
-* Version shows "Error loading" → Check your internet connection
-* No rules showing → Contact support
+Tests candidate rules against a page you paste in, without changing the rules Check uses. Nothing entered here is saved to the extension.
 
 {% hint style="warning" %}
-#### What if Settings Are Not Visible?
-
-If some settings do not appear in your version, it means your organization's IT department has set them for you. This is normal in business environments—your IT team wants to make sure everyone has the same security settings. You will also see text indicating that the extension is being managed by policy.
+The playground evaluates indicators that use a regular expression (a `pattern`) and some blocking rules. It does not evaluate code-driven indicators, so a page can pass in the playground and still be flagged in the browser.
 {% endhint %}
 
-## Troubleshooting Rule Updates
+### Load Current
 
-### **Problem: Rules won't update**
+Loads the rules file built into the extension into **Candidate Rules JSON**, as a starting point to edit. It does not load rules from a custom **Config URL**; to test those, paste the file in instead.
 
-1. Check your internet connection
-2. Try clicking "Update Rules Now" again
-3. If using a custom rules URL, verify that the URL is correct
-4. Contact your IT department if the problem persists
+### Candidate Rules JSON
 
-### **Problem: Extension seems slow after rule update**
+The rules to test: a complete rules file, an object with a `phishing_indicators` array, or an array of indicators. **Validate** checks that the JSON parses and lists basic problems, such as a rule with no `id`; it does not check regular expressions or rule logic. **Sanitize** reformats the JSON with consistent indentation without changing any values. **Copy** copies the JSON to your clipboard, for example to save it into a custom rules file.
 
-1. Wait 5-10 minutes for the new rules to fully load
-2. Restart your browser
-3. If still slow, try updating rules again
+### Test URL
 
-## Using the Rule Playground
+The address of the page you are simulating. Required. Regular-expression indicators are matched against it as well as against the HTML.
+
+### Sample HTML (will not fetch live)
+
+The page's HTML source. Required, because the playground never fetches the live page: open the page in a browser, view its source, and paste all of it here.
+
+### Test Rules
+
+Runs the candidate rules against the **Test URL** and **Sample HTML**. **Clear** empties all three fields. The results appear below:
+
+* **Decision & Summary**: the decision (**PASS**, **WARN**, or **BLOCK**), the threat score, the number of threats at each severity, and the reason if a blocking rule triggered.
+* **Threats**: each rule that matched, with its severity, action, category, and the snippet of HTML that matched.
+* **Unsupported Features**: checks the playground cannot simulate from pasted HTML (dynamic scripts, network headers, live stylesheet rules, and referrer validation). The same list appears on every run.
+* **Raw JSON**: the full evaluation result.
 
 {% hint style="warning" %}
-Note that the Rule Playground is in beta. Some limitations affect how it handles more complex detection filters, so results may not be identical to the extension's behavior.
+When your organisation manages Check through policy, the **General**, **Detection Rules** and **Branding** sections are hidden, and the page header shows **Managed by Policy**. Your IT department sets these options for you.
 {% endhint %}
-
-The rule playground is your chance to prototype and test detection rules locally.
-
-### Setting Up Candidate Rules
-
-There are two ways to build your candidate rules:
-
-1. You can use the `Load Current` button to pull in the configured detection rules for the browser. You can test them as-is or add or edit the rules JSON until you have the candidate rules you want to test.
-2. Create a fully custom candidate ruleset. This should be an array. See the format of the default detection rule set for the data structure.
-
-Once created, you have additional tools to review your JSON.
-
-* [**Validate**](detection-rules.md#understanding-the-validation-tool)
-* [**Sanitize**](detection-rules.md#understanding-the-sanitize-tool)
-* **Copy**: Copies the current JSON to your clipboard. This allows you to paste it into the editor of your choice or use it to create a pull request on GitHub if you are contributing back to the source code.
-
-#### Understanding the Validation Tool
-
-What it checks:
-
-1. JSON validity
-   * Tries to parse the text. If parsing fails, it shows “Invalid JSON: \<error>” and stops.
-2. Overall shape (must be ONE of):
-   * An array of rule objects
-   * An object with a rules array (parsed.rules)
-   * A single rule object that has both id and type
-   * If none match, it will issue “JSON does not look like rule(s) array or object with 'rules'.”
-3. For each rule it inspects ONLY these fields:
-   * id: Missing → issue “Rule missing 'id'”
-   * type: Missing → issue “Rule \<id or (unknown)> missing 'type'”
-   * weight: Present but not a number → issue “Rule \<id> weight should be number”
-   * description: Missing → suggestion “Rule \<id> missing description (optional but recommended)”
-4. Output:
-   * Issues (blocking problems) listed if any
-   * Suggestions (non‑blocking) listed if any
-   * “No blocking validation issues found.” if zero issues
-   * Displays results panel; does NOT change your JSON
-
-What Validate does NOT do
-
-* Does not check regex correctness
-* Does not verify severity/action/pattern semantics
-* Does not add or remove fields
-* Does not reformat or reorder anything
-* Does not merge with stored extension rules
-
-#### Understanding the Sanitize Tool
-
-What Sanitize actually “fixes”
-
-* Only whitespace, indentation, and line structure.
-
-What Sanitize does NOT change
-
-* Field names, values, types
-* Order of object properties beyond natural JS enumeration
-* Array ordering
-* Missing required fields (`id`, `type`, etc.)
-* Invalid logic or patterns
-* It does not validate anything beyond being parseable JSON
-
-### Testing Your Rules
-
-Once you have your candidate rules, you can test your ruleset by providing a test URL and sample HTML from that site. You must copy the HTML because the tool will not fetch it from the live site. The URL is needed for the ruleset evaluation. Once you have the test URL and sample HTML, select `Test Rules`. To start a fresh test, select `Clear`.
-
-### Reading the Test Results
-
-Below the `Test Rules` button, you will see the output of your candidate rule set with the test URL and sample HTML.
-
-* **Decision & Summary**: This provides a high-level overview of the test result, including the decision to allow, warn, or block.
-* **Threats**: This outlines the rules that identified threats in the sample HTML, along with a snippet of the HTML that triggered the detection.
-* **Unsupported Features**: This outlines the features that the playground was unable to check because of the complexity of those filters.
-* **Raw JSON**: This will allow you to view the raw output of the playground's evaluation of the sample HTML.
